@@ -1,0 +1,18 @@
+.app-layout {
+  display: flex;
+  margin-top: var(--header-height);
+  min-height: calc(100vh - var(--header-height));
+}
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  background: var(--app-bg);
+  min-height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+}
+
+/* Override Ionic defaults for our dark layout */
+ion-app {
+  --ion-background-color: var(--app-bg);
+}

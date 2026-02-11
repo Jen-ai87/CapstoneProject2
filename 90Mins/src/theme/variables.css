@@ -1,0 +1,32 @@
+/* 90Mins App Theme Variables */
+
+:root {
+  /* Backgrounds */
+  --app-bg: #0F172B;
+  --card-bg: #1D293D;
+  --header-bg: #0F172B;
+
+  /* Borders */
+  --border-color: #757575;
+  --card-border: #757575;
+
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: #8b949e;
+  --text-muted: #6b7280;
+
+  /* Accent / Interactive */
+  --accent-color: #00B8DB;
+  --pill-selected-bg: #314158;
+  --pill-stroke: #757575;
+
+  /* Buttons */
+  --btn-bg: #314158;
+
+  /* Hover */
+  --hover-bg: #1e293b;
+
+  /* Layout */
+  --header-height: 56px;
+  --sidebar-width: 210px;
+}
