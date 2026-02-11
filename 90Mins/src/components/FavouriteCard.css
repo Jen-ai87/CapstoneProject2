@@ -1,0 +1,77 @@
+.favourite-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.favourite-card:last-child {
+  border-bottom: none;
+}
+
+.favourite-card-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.favourite-team-abbr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--app-bg);
+  border: 1px dashed var(--card-border);
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.favourite-team-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.favourite-team-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.favourite-league-name {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.favourite-next-match {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.next-match-info {
+  color: #00B8DB;
+}
+
+.favourite-remove-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  transition: color 0.15s;
+}
+
+.favourite-remove-btn:hover {
+  color: #ef4444;
+}
