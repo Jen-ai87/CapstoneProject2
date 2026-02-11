@@ -1,0 +1,168 @@
+.standings-table-container {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+}
+
+/* League header */
+.standings-league-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.standings-league-logo {
+  font-size: 18px;
+}
+
+.standings-league-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Table */
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.standings-header-row th {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-align: center;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.standings-header-row .col-pos {
+  text-align: left;
+  padding-left: 20px;
+  width: 40px;
+}
+
+.standings-header-row .col-team {
+  text-align: left;
+  padding-left: 0;
+}
+
+/* Table rows */
+.standings-row td {
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+  text-align: center;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.standings-row:last-child td {
+  border-bottom: none;
+}
+
+.standings-row .col-pos {
+  text-align: left;
+  padding-left: 20px;
+  width: 40px;
+}
+
+.standings-row .col-team {
+  text-align: left;
+  padding-left: 0;
+}
+
+/* Position number colors by zone */
+.position-number {
+  font-weight: 400;
+}
+
+.col-pos.zone-cl .position-number {
+  color: #00B8DB;
+}
+
+.col-pos.zone-el .position-number {
+  color: #3b82f6;
+}
+
+.col-pos.zone-rel .position-number {
+  color: #ef4444;
+}
+
+/* Team info in row */
+.standings-team-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.standings-team-abbr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--app-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.standings-team-name {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+
+/* Goal difference - green for positive */
+.col-gd {
+  color: #22c55e;
+}
+
+/* Points - bold */
+.col-pts {
+  font-weight: 500;
+}
+
+/* Legend */
+.standings-legend {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--card-border);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
+}
+
+.legend-cl {
+  background: #00B8DB;
+}
+
+.legend-el {
+  background: #3b82f6;
+}
+
+.legend-rel {
+  background: #ef4444;
+}
+
+.legend-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
