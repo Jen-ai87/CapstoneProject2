@@ -86,7 +86,7 @@ const MatchesPage: React.FC = () => {
           </div>
           <div className="matches-grid">
             {filteredLive.map((match) => (
-              <div><h2>TODO: Wassan to work on Match Card</h2></div>
+              <div><h2>TODO: Wassn to work on Match Card</h2></div>
             ))}
           </div>
         </div>
@@ -102,7 +102,7 @@ const MatchesPage: React.FC = () => {
           </div>
           <div className="matches-grid">
             {filteredUpcoming.map((match) => (
-              <div><h2>TODO: Wassan to work on Match Card</h2></div>
+              <div><h2>TODO: Wassn to work on Match Card</h2></div>
             ))}
           </div>
         </div>
@@ -118,7 +118,7 @@ const MatchesPage: React.FC = () => {
           </div>
           <div className="matches-grid">
             {filteredFinished.map((match) => (
-              <div><h2>TODO: Wassan to work on Match Card</h2></div>
+              <div><h2>TODO: Wassn to work on Match Card</h2></div>
             ))}
           </div>
         </div>
