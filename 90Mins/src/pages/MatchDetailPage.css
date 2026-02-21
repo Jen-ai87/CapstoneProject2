@@ -1,0 +1,381 @@
+/* ── Match Detail Page ── */
+
+.match-detail-page {
+  padding: 24px 28px;
+  max-width: 1000px;
+}
+
+/* Back button */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 24px;
+  transition: color 0.15s;
+}
+
+.back-btn:hover {
+  color: var(--accent-color);
+}
+
+.back-btn ion-icon {
+  font-size: 18px;
+}
+
+/* ── Match header ── */
+.detail-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 24px;
+}
+
+.detail-league-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.detail-league-dot {
+  width: 8px;
+  height: 8px;
+  background: #f59e0b;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.detail-live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #00B8DB;
+  font-weight: 500;
+}
+
+.detail-live-dot {
+  width: 8px;
+  height: 8px;
+  background: #00B8DB;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.detail-ft-badge {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.detail-upcoming-badge {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Teams row */
+.detail-teams-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 8px;
+}
+
+.detail-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 100px;
+}
+
+.detail-team-abbr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: var(--app-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.detail-team-name {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 400;
+  text-align: center;
+}
+
+.detail-score {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 4px;
+}
+
+.detail-score.live {
+  color: var(--text-primary);
+}
+
+.detail-venue {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Tab bar ── */
+.detail-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  margin-bottom: 20px;
+}
+
+.detail-tab {
+  flex: none;
+  padding: 14px 24px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.detail-tab:hover {
+  color: var(--text-primary);
+}
+
+.detail-tab.active {
+  color: #00B8DB;
+  border-bottom-color: #00B8DB;
+}
+
+/* ── Content area ── */
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Reusable card wrapper */
+.detail-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  padding: 20px;
+}
+
+.detail-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.detail-card-icon {
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.placeholder-text {
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 20px 0;
+  margin: 0;
+}
+
+/* ── Possession ── */
+.possession-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.possession-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.possession-value {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.possession-value.home {
+  color: #00B8DB;
+}
+
+.possession-value.away {
+  color: #3b82f6;
+}
+
+.possession-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 0;
+  overflow: hidden;
+  margin-bottom: 20px;
+  gap: 2px;
+}
+
+.possession-bar-fill.home {
+  background: #00B8DB;
+}
+
+.possession-bar-fill.away {
+  background: #3b82f6;
+}
+
+/* ── Stat rows ── */
+.stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-top: 1px solid rgba(117, 117, 117, 0.2);
+}
+
+.stat-row-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  text-align: center;
+  flex: 1;
+}
+
+.stat-row-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 40px;
+}
+
+.stat-row-value.home {
+  text-align: left;
+}
+
+.stat-row-value.away {
+  text-align: right;
+}
+
+/* ── Events timeline ── */
+.events-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+/* Centre line */
+.events-timeline::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(117, 117, 117, 0.25);
+  transform: translateX(-50%);
+}
+
+.event-item {
+  position: relative;
+  padding: 16px 0;
+}
+
+.event-item.home {
+  padding-right: 52%;
+}
+
+.event-item.away {
+  padding-left: 52%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.event-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.event-item.away .event-content {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.event-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.event-player {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+
+.event-minute {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Event icons */
+.event-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.event-icon--goal {
+  color: #00B8DB;
+}
+
+.event-icon--sub {
+  color: var(--text-muted);
+}
+
+/* Card icons (yellow / red) */
+.event-card-icon {
+  display: inline-block;
+  width: 14px;
+  height: 18px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.event-card-icon--yellow {
+  background: #f59e0b;
+}
+
+.event-card-icon--red {
+  background: #ef4444;
+}
+
