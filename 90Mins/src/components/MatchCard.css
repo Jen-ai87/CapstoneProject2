@@ -1,0 +1,151 @@
+.match-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  padding: 0;
+  min-width: 280px;
+  flex: 1;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.match-card.clickable {
+  cursor: pointer;
+}
+
+.match-card.clickable:hover {
+  background: var(--hover-bg);
+  border-color: var(--accent-color);
+}
+
+.match-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.match-league {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.league-logo {
+  font-size: 16px;
+}
+
+.league-name {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.match-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+}
+
+.status-dot.live {
+  background: #00B8DB;
+}
+
+.status-dot.ht {
+  background: #ef4444;
+}
+
+.minute-text {
+  font-size: 13px;
+  color: #00B8DB;
+  font-weight: 600;
+}
+
+.minute-text.ht {
+  color: #ef4444;
+}
+
+.kickoff-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ft-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.match-teams {
+  padding: 8px 14px;
+}
+
+.team-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.team-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-abbr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--app-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.team-name {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 400;
+}
+
+.team-score {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--text-primary);
+  min-width: 20px;
+  text-align: right;
+}
+
+.team-score.live {
+  color: #00B8DB;
+}
+
+.match-venue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 12px;
+  border-top: 1px solid var(--card-border);
+}
+
+.venue-icon {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.match-venue span {
+  font-size: 13px;
+  color: var(--text-muted);
+}
