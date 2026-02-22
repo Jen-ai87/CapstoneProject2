@@ -4,6 +4,7 @@ import { IonIcon } from '@ionic/react';
 import { calendarOutline } from 'ionicons/icons';
 import DateSelector from '../components/DateSelector';
 import LeagueFilter from '../components/LeagueFilter';
+import MatchCard from '../components/MatchCard';
 import { liveMatches, upcomingMatches, finishedMatches, tomorrowMatches } from '../data/matches';
 import { Match } from '../data/types';
 import './MatchesPage.css';
@@ -86,7 +87,7 @@ const MatchesPage: React.FC = () => {
           </div>
           <div className="matches-grid">
             {filteredLive.map((match) => (
-              <div><h2>TODO: Wassn to work on Match Card</h2></div>
+              <MatchCard key={match.id} match={match} />
             ))}
           </div>
         </div>
@@ -102,7 +103,7 @@ const MatchesPage: React.FC = () => {
           </div>
           <div className="matches-grid">
             {filteredUpcoming.map((match) => (
-              <div><h2>TODO: Wassn to work on Match Card</h2></div>
+              <MatchCard key={match.id} match={match} />
             ))}
           </div>
         </div>
@@ -118,7 +119,7 @@ const MatchesPage: React.FC = () => {
           </div>
           <div className="matches-grid">
             {filteredFinished.map((match) => (
-              <div><h2>TODO: Wassn to work on Match Card</h2></div>
+              <MatchCard key={match.id} match={match} />
             ))}
           </div>
         </div>

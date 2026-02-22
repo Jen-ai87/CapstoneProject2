@@ -3,8 +3,14 @@ import { IonReactRouter } from '@ionic/react-router';
 import { Redirect, Route, Switch } from 'react-router-dom';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
+import AuthModal from './components/AuthModal';
 import { AuthProvider } from './context/AuthContext';
 import MatchesPage from './pages/MatchesPage';
+import StandingsPage from './pages/StandingsPage';
+import FavouritesPage from './pages/FavouritesPage';
+import MatchDetailPage from './pages/MatchDetailPage';
+import ProfilePage from './pages/ProfilePage';
+import Page from './pages/Page';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -44,12 +50,25 @@ const App: React.FC = () => {
       <AuthProvider>
         <IonReactRouter>
           <Header />
+          <AuthModal />
           <div className="app-layout">
             <Sidebar />
             <main className="main-content">
-              <Switch>              
+              <Switch>
+                <Route path="/profile" exact>
+                  <ProfilePage />
+                </Route>
+                <Route path="/match/:matchId" exact>
+                  <MatchDetailPage />
+                </Route>
                 <Route path="/matches" exact>
                   <MatchesPage />
+                </Route>
+                <Route path="/standings" exact>
+                  <StandingsPage />
+                </Route>
+                <Route path="/favourites" exact>
+                  <FavouritesPage />
                 </Route>
                 <Route path="/" exact>
                   <Redirect to="/matches" />

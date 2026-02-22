@@ -3,6 +3,7 @@ import { IonIcon } from '@ionic/react';
 import { searchOutline, notificationsOutline, personCircleOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationDrawer from './NotificationDrawer';
 import './Header.css';
 
 const Header: React.FC = () => {
@@ -40,17 +41,24 @@ const Header: React.FC = () => {
             <div className="header-user">
               <button className="header-user-link" onClick={() => history.push('/profile')}>
                 <IonIcon icon={personCircleOutline} className="header-user-icon" />
-                <span className="header-user-name">John Smith</span>
+                <span className="header-user-name">{user?.name}</span>
               </button>
               <button className="sign-out-btn" onClick={signOut}>Sign Out</button>
             </div>
           ) : (
-            <button className="sign-in-btn">
+            <button className="sign-in-btn" onClick={() => openAuthModal('signin')}>
               Sign In
             </button>
           )}
         </div>
       </header>
+
+      {isAuthenticated && (
+        <NotificationDrawer
+          open={showNotifications}
+          onClose={() => setShowNotifications(false)}
+        />
+      )}
     </>
   );
 };
