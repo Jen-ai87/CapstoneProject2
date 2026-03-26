@@ -4,9 +4,9 @@
  * Free API with unlimited requests, no rate limits
  */
 
-// Use local proxy for dev, direct API for production
-const isDev = import.meta.env.DEV;
-const BASE_URL = isDev ? '/api' : 'https://sports.bzzoiro.com/api';
+// Always use the local proxy path — in dev Vite proxies /api,
+// in production the Vercel serverless function at api/[...path].js proxies it.
+const BASE_URL = '/api';
 const API_KEY = import.meta.env.VITE_BSD_API_KEY;
 
 // Verify token is loaded correctly (should be 45 characters)
