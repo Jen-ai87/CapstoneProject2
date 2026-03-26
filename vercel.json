@@ -1,0 +1,8 @@
+{
+  "installCommand": "cd 90Mins && npm install --include=dev",
+  "buildCommand": "cd 90Mins && npm run build",
+  "outputDirectory": "90Mins/dist",
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
