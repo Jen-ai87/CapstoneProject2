@@ -7,9 +7,7 @@
  * e.g. GET /api/live/        → https://sports.bzzoiro.com/api/live/
  *      GET /api/events/?league=8 → https://sports.bzzoiro.com/api/events/?league=8
  */
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   // Handle preflight CORS requests
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
