@@ -1,0 +1,352 @@
+﻿[
+    {
+        "id":  81,
+        "api_id":  5885,
+        "name":  "1. FC Heidenheim",
+        "short_name":  "Heidenheim",
+        "country":  ""
+    },
+    {
+        "id":  94,
+        "api_id":  2671,
+        "name":  "1. FC KÃ¶ln",
+        "short_name":  "KÃ¶ln",
+        "country":  ""
+    },
+    {
+        "id":  83,
+        "api_id":  2547,
+        "name":  "1. FC Union Berlin",
+        "short_name":  "Union Berlin",
+        "country":  ""
+    },
+    {
+        "id":  93,
+        "api_id":  2556,
+        "name":  "1. FSV Mainz 05",
+        "short_name":  "Mainz 05",
+        "country":  ""
+    },
+    {
+        "id":  232,
+        "api_id":  2355,
+        "name":  "Aberdeen",
+        "short_name":  "",
+        "country":  ""
+    },
+    {
+        "id":  329,
+        "api_id":  3250,
+        "name":  "AEK Athens",
+        "short_name":  "AEK",
+        "country":  ""
+    },
+    {
+        "id":  324,
+        "api_id":  120224,
+        "name":  "AE Kifisia",
+        "short_name":  "Kifisia",
+        "country":  ""
+    },
+    {
+        "id":  336,
+        "api_id":  3265,
+        "name":  "AEL Novibet",
+        "short_name":  "AEL",
+        "country":  ""
+    },
+    {
+        "id":  122,
+        "api_id":  2953,
+        "name":  "AFC Ajax",
+        "short_name":  "Ajax",
+        "country":  ""
+    },
+    {
+        "id":  364,
+        "api_id":  44259,
+        "name":  "AFC Unirea 04 Slobozia",
+        "short_name":  "Unirea Slobozia",
+        "country":  ""
+    },
+    {
+        "id":  258,
+        "api_id":  34469,
+        "name":  "Al-Ahli",
+        "short_name":  "Al-Ahli",
+        "country":  ""
+    },
+    {
+        "id":  188,
+        "api_id":  6362,
+        "name":  "Alanyaspor",
+        "short_name":  "Alanyaspor",
+        "country":  ""
+    },
+    {
+        "id":  260,
+        "api_id":  34318,
+        "name":  "Al-Ettifaq",
+        "short_name":  "Al-Ettifaq",
+        "country":  ""
+    },
+    {
+        "id":  268,
+        "api_id":  56023,
+        "name":  "Al-Fateh",
+        "short_name":  "Al-Fateh",
+        "country":  ""
+    },
+    {
+        "id":  269,
+        "api_id":  168094,
+        "name":  "Al-Fayha",
+        "short_name":  "Al-Fayha",
+        "country":  ""
+    },
+    {
+        "id":  257,
+        "api_id":  168086,
+        "name":  "Al-Hazem",
+        "short_name":  "Al-Hazem",
+        "country":  ""
+    },
+    {
+        "id":  262,
+        "api_id":  21895,
+        "name":  "Al-Hilal",
+        "short_name":  "Al-Hilal",
+        "country":  ""
+    },
+    {
+        "id":  271,
+        "api_id":  34315,
+        "name":  "Al-Ittihad",
+        "short_name":  "Al-Ittihad",
+        "country":  ""
+    },
+    {
+        "id":  265,
+        "api_id":  167228,
+        "name":  "Al-Khaleej",
+        "short_name":  "Al-Khaleej",
+        "country":  ""
+    },
+    {
+        "id":  261,
+        "api_id":  269199,
+        "name":  "Al-Kholood",
+        "short_name":  "Al-Kholood",
+        "country":  ""
+    },
+    {
+        "id":  273,
+        "api_id":  395831,
+        "name":  "Al-Najma SC",
+        "short_name":  "Al-Najma",
+        "country":  ""
+    },
+    {
+        "id":  267,
+        "api_id":  23400,
+        "name":  "Al-Nassr",
+        "short_name":  "Al-Nassr",
+        "country":  ""
+    },
+    {
+        "id":  270,
+        "api_id":  336456,
+        "name":  "Al-Okhdood",
+        "short_name":  "Al-Okhdood",
+        "country":  ""
+    },
+    {
+        "id":  272,
+        "api_id":  56027,
+        "name":  "Al-Qadsiah",
+        "short_name":  "Al-Qadsiah",
+        "country":  ""
+    },
+    {
+        "id":  263,
+        "api_id":  168088,
+        "name":  "Al-Riyadh",
+        "short_name":  "Al-Riyadh",
+        "country":  ""
+    },
+    {
+        "id":  264,
+        "api_id":  34313,
+        "name":  "Al-Shabab",
+        "short_name":  "Al-Shabab",
+        "country":  ""
+    },
+    {
+        "id":  266,
+        "api_id":  56021,
+        "name":  "Al-Taawoun",
+        "short_name":  "Al-Taawoun",
+        "country":  ""
+    },
+    {
+        "id":  107,
+        "api_id":  1684,
+        "name":  "Angers",
+        "short_name":  "Angers",
+        "country":  ""
+    },
+    {
+        "id":  186,
+        "api_id":  3056,
+        "name":  "Antalyaspor",
+        "short_name":  "Antalyaspor",
+        "country":  ""
+    },
+    {
+        "id":  328,
+        "api_id":  3244,
+        "name":  "AO Egaleo",
+        "short_name":  "Egaleo",
+        "country":  ""
+    },
+    {
+        "id":  333,
+        "api_id":  3262,
+        "name":  "AO Kavala",
+        "short_name":  "Kavala",
+        "country":  ""
+    },
+    {
+        "id":  331,
+        "api_id":  426039,
+        "name":  "APO Ellas Syrou",
+        "short_name":  "Ellas Syrou",
+        "country":  ""
+    },
+    {
+        "id":  334,
+        "api_id":  5063,
+        "name":  "APO Levadiakos",
+        "short_name":  "Levadiakos",
+        "country":  ""
+    },
+    {
+        "id":  330,
+        "api_id":  5062,
+        "name":  "APS Atromitos Athinon",
+        "short_name":  "Atromitos",
+        "country":  ""
+    },
+    {
+        "id":  340,
+        "api_id":  274971,
+        "name":  "Arda Kardzhali",
+        "short_name":  "Arda",
+        "country":  ""
+    },
+    {
+        "id":  327,
+        "api_id":  3252,
+        "name":  "Aris Thessaloniki",
+        "short_name":  "Aris",
+        "country":  ""
+    },
+    {
+        "id":  18,
+        "api_id":  42,
+        "name":  "Arsenal",
+        "short_name":  "Arsenal",
+        "country":  ""
+    },
+    {
+        "id":  101,
+        "api_id":  1653,
+        "name":  "AS Monaco",
+        "short_name":  "AS Monaco",
+        "country":  ""
+    },
+    {
+        "id":  325,
+        "api_id":  6342,
+        "name":  "Asteras Aktor",
+        "short_name":  "Asteras",
+        "country":  ""
+    },
+    {
+        "id":  3,
+        "api_id":  40,
+        "name":  "Aston Villa",
+        "short_name":  "Aston Villa",
+        "country":  ""
+    },
+    {
+        "id":  71,
+        "api_id":  2686,
+        "name":  "Atalanta",
+        "short_name":  "Atalanta",
+        "country":  ""
+    },
+    {
+        "id":  337,
+        "api_id":  3255,
+        "name":  "Athens Kallithea FC",
+        "short_name":  "Kallithea",
+        "country":  ""
+    },
+    {
+        "id":  51,
+        "api_id":  2825,
+        "name":  "Athletic Club",
+        "short_name":  "Athletic Club",
+        "country":  ""
+    },
+    {
+        "id":  277,
+        "api_id":  243211,
+        "name":  "Atlanta United",
+        "short_name":  "Atlanta",
+        "country":  ""
+    },
+    {
+        "id":  305,
+        "api_id":  1949,
+        "name":  "Atlas FC",
+        "short_name":  "Atlas ",
+        "country":  ""
+    },
+    {
+        "id":  54,
+        "api_id":  2836,
+        "name":  "AtlÃ©tico Madrid",
+        "short_name":  "Atl. Madrid",
+        "country":  ""
+    },
+    {
+        "id":  155,
+        "api_id":  1977,
+        "name":  "AtlÃ©tico Mineiro",
+        "short_name":  "AtlÃ©tico-MG",
+        "country":  ""
+    },
+    {
+        "id":  319,
+        "api_id":  1950,
+        "name":  "AtlÃ©tico San Luis",
+        "short_name":  "San Luis",
+        "country":  ""
+    },
+    {
+        "id":  290,
+        "api_id":  377973,
+        "name":  "Austin FC",
+        "short_name":  "Austin",
+        "country":  ""
+    },
+    {
+        "id":  109,
+        "api_id":  1646,
+        "name":  "Auxerre",
+        "short_name":  "Auxerre",
+        "country":  ""
+    }
+]

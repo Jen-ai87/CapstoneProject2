@@ -8,10 +8,22 @@
   bottom: 0;
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
+  padding: 12px 0;
   border-right: 1px solid var(--card-border);
   z-index: 90;
   overflow-y: auto;
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 768px) {
+  .app-sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--transition-normal);
+  }
+  
+  .app-sidebar.mobile-open {
+    transform: translateX(0);
+  }
 }
 
 .sidebar-nav {
@@ -25,7 +37,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   background: none;
   border: none;
   border-left: 3px solid transparent;
@@ -35,7 +47,7 @@
   cursor: pointer;
   text-align: left;
   width: 100%;
-  transition: background 0.15s, color 0.15s;
+  transition: all var(--transition-fast);
 }
 
 .nav-item:hover {
@@ -43,15 +55,26 @@
   color: var(--text-primary);
 }
 
+.nav-item:hover .nav-icon {
+  transform: scale(1.1);
+}
+
 .nav-item.active {
   background: rgba(0, 184, 219, 0.15);
   color: var(--text-primary);
   border-left-color: var(--accent-color);
+  box-shadow: inset 0 0 12px rgba(0, 184, 219, 0.1);
+}
+
+.nav-item:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
 }
 
 .nav-icon {
   font-size: 20px;
   flex-shrink: 0;
+  transition: transform var(--transition-fast);
 }
 
 .nav-label {
@@ -81,18 +104,27 @@
   border: none;
   color: var(--text-secondary);
   font-size: 14px;
-  padding: 8px 14px;
-  border-radius: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: all var(--transition-fast);
+  margin: 2px 8px;
+  width: calc(100% - 16px);
 }
 
 .league-link:hover {
   background: var(--hover-bg);
   color: var(--text-primary);
+  transform: translateX(4px);
 }
 
 .league-link.active {
   color: var(--accent-color);
   background: rgba(0, 184, 219, 0.1);
+  font-weight: 500;
+}
+
+.league-link:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
 }

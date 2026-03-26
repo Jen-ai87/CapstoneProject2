@@ -1,145 +1,73 @@
-import { LeagueStanding } from './types';
+import { LeagueStanding, ZoneType } from './types';
+import { teams } from './teams';
 
-/**
- * Premier League standings — matches the Figma mockup exactly
- */
-export const premierLeagueStandings: LeagueStanding = {
-  leagueId: 'premier-league',
-  rows: [
-    {
-      position: 1,
-      teamId: 'man-city',
-      played: 12,
-      won: 9,
-      drawn: 2,
-      lost: 1,
-      goalsFor: 28,
-      goalsAgainst: 10,
-      goalDifference: 18,
-      points: 29,
-      zone: 'champions-league',
-    },
-    {
-      position: 2,
-      teamId: 'arsenal',
-      played: 12,
-      won: 8,
-      drawn: 3,
-      lost: 1,
-      goalsFor: 26,
-      goalsAgainst: 12,
-      goalDifference: 14,
-      points: 27,
-      zone: 'champions-league',
-    },
-    {
-      position: 3,
-      teamId: 'liverpool',
-      played: 12,
-      won: 8,
-      drawn: 2,
-      lost: 2,
-      goalsFor: 25,
-      goalsAgainst: 14,
-      goalDifference: 11,
-      points: 26,
-      zone: 'champions-league',
-    },
-    {
-      position: 4,
-      teamId: 'tottenham',
-      played: 12,
-      won: 7,
-      drawn: 3,
-      lost: 2,
-      goalsFor: 28,
-      goalsAgainst: 15,
-      goalDifference: 9,
-      points: 24,
-      zone: 'champions-league',
-    },
-    {
-      position: 5,
-      teamId: 'man-utd',
-      played: 12,
-      won: 7,
-      drawn: 2,
-      lost: 3,
-      goalsFor: 28,
-      goalsAgainst: 16,
-      goalDifference: 6,
-      points: 23,
-      zone: 'europa-league',
-    },
-    {
-      position: 6,
-      teamId: 'chelsea',
-      played: 12,
-      won: 6,
-      drawn: 4,
-      lost: 3,
-      goalsFor: 28,
-      goalsAgainst: 13,
-      goalDifference: 7,
-      points: 22,
-      zone: null,
-    },
-    {
-      position: 7,
-      teamId: 'newcastle',
-      played: 12,
-      won: 6,
-      drawn: 3,
-      lost: 2,
-      goalsFor: 28,
-      goalsAgainst: 14,
-      goalDifference: 5,
-      points: 21,
-      zone: null,
-    },
-    {
-      position: 8,
-      teamId: 'brighton',
-      played: 12,
-      won: 5,
-      drawn: 4,
-      lost: 3,
-      goalsFor: 28,
-      goalsAgainst: 15,
-      goalDifference: 3,
-      points: 19,
-      zone: 'relegation',
-    },
-    {
-      position: 9,
-      teamId: 'aston-villa',
-      played: 12,
-      won: 5,
-      drawn: 3,
-      lost: 4,
-      goalsFor: 17,
-      goalsAgainst: 16,
-      goalDifference: 1,
-      points: 18,
-      zone: 'relegation',
-    },
-    {
-      position: 10,
-      teamId: 'west-ham',
-      played: 12,
-      won: 4,
-      drawn: 5,
-      lost: 3,
-      goalsFor: 16,
-      goalsAgainst: 15,
-      goalDifference: 1,
-      points: 17,
-      zone: 'relegation',
-    },
-  ],
+const buildForm = (seed: number): ('W' | 'L' | 'D')[] => {
+  const values: Array<'W' | 'L' | 'D'> = ['W', 'D', 'L'];
+  return Array.from({ length: 5 }, (_, idx) => values[(seed + idx) % values.length]);
 };
 
-export const allStandings: LeagueStanding[] = [premierLeagueStandings];
+const resolveZone = (position: number, totalTeams: number): ZoneType => {
+  if (totalTeams >= 6) {
+    if (position <= 4) return 'champions-league';
+    if (position <= 6) return 'europa-league';
+    if (position > totalTeams - 3) return 'relegation';
+  }
+  if (totalTeams >= 4 && position <= 2) return 'champions-league';
+  return null;
+};
+
+const buildLeagueStandings = (leagueId: string): LeagueStanding => {
+  const leagueTeams = teams.filter((team) => team.leagueId === leagueId);
+  const totalTeams = leagueTeams.length;
+  const rows = leagueTeams
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((team, index) => {
+      const position = index + 1;
+      const played = 12;
+      const won = Math.max(0, Math.min(played, played - index - 2));
+      const drawn = index % 3;
+      const lost = Math.max(0, played - won - drawn);
+      const goalsFor = 16 + (totalTeams - index) * 2;
+      const goalsAgainst = 8 + index * 2;
+      const goalDifference = goalsFor - goalsAgainst;
+      const points = won * 3 + drawn;
+
+      return {
+        position,
+        teamId: team.id,
+        played,
+        won,
+        drawn,
+        lost,
+        goalsFor,
+        goalsAgainst,
+        goalDifference,
+        points,
+        zone: resolveZone(position, totalTeams),
+        form: buildForm(index),
+      };
+    });
+
+  return {
+    leagueId,
+    rows,
+  };
+};
+
+export const premierLeagueStandings = buildLeagueStandings('premier-league');
+export const laLigaStandings = buildLeagueStandings('la-liga');
+export const serieAStandings = buildLeagueStandings('serie-a');
+export const bundesligaStandings = buildLeagueStandings('bundesliga');
+export const ligue1Standings = buildLeagueStandings('ligue-1');
+
+export const allStandings: LeagueStanding[] = [
+  premierLeagueStandings,
+  laLigaStandings,
+  serieAStandings,
+  bundesligaStandings,
+  ligue1Standings,
+];
 
 export const getStandingsByLeague = (leagueId: string): LeagueStanding | undefined =>
   allStandings.find((s) => s.leagueId === leagueId);

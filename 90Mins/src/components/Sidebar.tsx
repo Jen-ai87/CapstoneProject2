@@ -23,8 +23,10 @@ interface QuickAccessLeague {
 const quickAccessLeagues: QuickAccessLeague[] = [
   { label: 'Premier League', leagueId: 'premier-league' },
   { label: 'La Liga', leagueId: 'la-liga' },
-  { label: 'Seria A', leagueId: 'serie-a' },
+  { label: 'Serie A', leagueId: 'serie-a' },
   { label: 'Bundesliga', leagueId: 'bundesliga' },
+  { label: 'Ligue 1', leagueId: 'ligue-1' },
+  { label: 'Champions League', leagueId: 'champions-league' },
 ];
 
 const Sidebar: React.FC = () => {
@@ -61,7 +63,7 @@ const Sidebar: React.FC = () => {
           <button
             key={league.leagueId}
             className={`league-link ${activeLeagueId === league.leagueId ? 'active' : ''}`}
-            onClick={() => history.push(`/matches?league=${league.leagueId}`)}
+            onClick={() => history.push(`/league/${league.leagueId}`)}
           >
             {league.label}
           </button>

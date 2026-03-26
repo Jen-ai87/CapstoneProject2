@@ -1,9 +1,13 @@
-import { useState } from 'react';
-import { IonIcon } from '@ionic/react';
+import { useState, useEffect } from 'react';
+import { IonIcon, IonSpinner } from '@ionic/react';
 import {
   personCircleOutline,
   checkmarkOutline,
   lockClosedOutline,
+  mailOutline,
+  keyOutline,
+  shieldCheckmarkOutline,
+  notificationsOutline,
 } from 'ionicons/icons';
 import { useAuth } from '../context/AuthContext';
 import './ProfilePage.css';
@@ -22,9 +26,9 @@ const ProfilePage: React.FC = () => {
   const [notifMatchStart, setNotifMatchStart] = useState(true);
   const [notifHalfTime, setNotifHalfTime] = useState(false);
   const [notifFullTime, setNotifFullTime] = useState(true);
-  const [notifTransfers, setNotifTransfers] = useState(false);
 
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /* ── Auth guard ── */
@@ -36,21 +40,31 @@ const ProfilePage: React.FC = () => {
           <p className="profile-subtitle">Manage your account settings</p>
         </div>
         <div className="profile-auth-guard">
-          <IonIcon icon={lockClosedOutline} className="profile-guard-icon" />
+          <div className="profile-guard-icon-wrapper">
+            <IonIcon icon={lockClosedOutline} className="profile-guard-icon" />
+          </div>
           <p className="profile-guard-title">Sign in required</p>
-          <p className="profile-guard-subtitle">Please sign in to view your profile</p>
-          <button className="profile-guard-btn" onClick={() => openAuthModal('signin')}>
-            Sign In
-          </button>
+          <p className="profile-guard-subtitle">Please sign in to view your profile and manage settings</p>
+          <div className="profile-guard-actions">
+            <button className="profile-guard-btn-primary" onClick={() => openAuthModal('signin')}>
+              Sign In
+            </button>
+            <button className="profile-guard-btn-secondary" onClick={() => openAuthModal('signup')}>
+              Create Account
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     setError(null);
+    setSaving(true);
+    
     if (!name.trim() || !email.trim()) {
       setError('Name and email are required');
+      setSaving(false);
       return;
     }
 
@@ -58,13 +72,18 @@ const ProfilePage: React.FC = () => {
     if (password || confirmPassword) {
       if (password !== confirmPassword) {
         setError('Passwords do not match');
+        setSaving(false);
         return;
       }
       if (password.length < 6) {
         setError('Password must be at least 6 characters');
+        setSaving(false);
         return;
       }
     }
+
+    // Simulate async save
+    await new Promise(resolve => setTimeout(resolve, 800));
 
     updateUser({
       name: name.trim(),
@@ -74,6 +93,7 @@ const ProfilePage: React.FC = () => {
 
     setPassword('');
     setConfirmPassword('');
+    setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -83,148 +103,185 @@ const ProfilePage: React.FC = () => {
       {/* Page heading */}
       <div className="profile-page-header">
         <h1 className="profile-title">Profile</h1>
-        <p className="profile-subtitle">Manage your account settings</p>
+        <p className="profile-subtitle">Manage your account settings and preferences</p>
       </div>
 
       {/* User avatar card */}
       <div className="profile-avatar-card">
-        <IonIcon icon={personCircleOutline} className="profile-avatar-icon" />
+        <div className="profile-avatar-icon-wrapper">
+          <IonIcon icon={personCircleOutline} className="profile-avatar-icon" />
+        </div>
         <div className="profile-avatar-info">
           <span className="profile-avatar-name">{user.name}</span>
           <span className="profile-avatar-email">{user.email}</span>
         </div>
       </div>
 
-      {/* Personal info card */}
-      <div className="profile-card">
-        <h3 className="profile-card-title">Personal Information</h3>
+      {/* Account Settings Section */}
+      <div className="profile-section">
+        <h2 className="profile-section-title">
+          <IonIcon icon={shieldCheckmarkOutline} />
+          Account Settings
+        </h2>
 
-        <label className="profile-label">
-          Name
-          <input
-            type="text"
-            className="profile-input"
-            value={name}
-            onChange={(e) => { setName(e.target.value); setError(null); }}
-          />
-        </label>
+        {/* Personal info card */}
+        <div className="profile-card">
+          <div className="profile-card-header">
+            <IonIcon icon={personCircleOutline} className="profile-card-icon" />
+            <h3 className="profile-card-title">Personal Information</h3>
+          </div>
 
-        <label className="profile-label">
-          Email
-          <input
-            type="email"
-            className="profile-input"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); setError(null); }}
-          />
-        </label>
+          <label className="profile-label">
+            Full Name
+            <input
+              type="text"
+              className="profile-input"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setError(null); }}
+              placeholder="Enter your full name"
+            />
+          </label>
+
+          <label className="profile-label">
+            Email Address
+            <div className="profile-input-with-icon">
+              <IonIcon icon={mailOutline} className="profile-input-icon" />
+              <input
+                type="email"
+                className="profile-input with-icon"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                placeholder="your.email@example.com"
+              />
+            </div>
+          </label>
+        </div>
+
+        {/* Change password card */}
+        <div className="profile-card">
+          <div className="profile-card-header">
+            <IonIcon icon={keyOutline} className="profile-card-icon" />
+            <h3 className="profile-card-title">Change Password</h3>
+          </div>
+
+          <label className="profile-label">
+            New Password
+            <div className="profile-input-with-icon">
+              <IonIcon icon={lockClosedOutline} className="profile-input-icon" />
+              <input
+                type="password"
+                className="profile-input with-icon"
+                placeholder="Leave blank to keep current"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(null); }}
+              />
+            </div>
+          </label>
+
+          <label className="profile-label">
+            Confirm Password
+            <div className="profile-input-with-icon">
+              <IonIcon icon={lockClosedOutline} className="profile-input-icon" />
+              <input
+                type="password"
+                className="profile-input with-icon"
+                placeholder="Re-enter new password"
+                value={confirmPassword}
+                onChange={(e) => { setConfirmPassword(e.target.value); setError(null); }}
+              />
+            </div>
+          </label>
+        </div>
       </div>
 
-      {/* Change password card */}
-      <div className="profile-card">
-        <h3 className="profile-card-title">Change Password</h3>
+      {/* Notification preferences Section */}
+      <div className="profile-section">
+        <h2 className="profile-section-title">
+          <IonIcon icon={notificationsOutline} />
+          Notification Preferences
+        </h2>
 
-        <label className="profile-label">
-          New Password
-          <input
-            type="password"
-            className="profile-input"
-            placeholder="Leave blank to keep current"
-            value={password}
-            onChange={(e) => { setPassword(e.target.value); setError(null); }}
-          />
-        </label>
+        <div className="profile-card">
+          <p className="profile-card-description">
+            Choose what notifications you want to receive for your favourite teams
+          </p>
 
-        <label className="profile-label">
-          Confirm Password
-          <input
-            type="password"
-            className="profile-input"
-            placeholder="Re-enter new password"
-            value={confirmPassword}
-            onChange={(e) => { setConfirmPassword(e.target.value); setError(null); }}
-          />
-        </label>
-      </div>
-
-      {/* Notification preferences card */}
-      <div className="profile-card">
-        <h3 className="profile-card-title">Notification Preferences</h3>
-
-        <div className="profile-toggle-row">
-          <div className="profile-toggle-info">
-            <span className="profile-toggle-label">Goal Alerts</span>
-            <span className="profile-toggle-desc">Get notified when a goal is scored</span>
+          <div className="profile-toggle-row">
+            <div className="profile-toggle-info">
+              <span className="profile-toggle-label">Goal Alerts</span>
+              <span className="profile-toggle-desc">Get notified when a goal is scored</span>
+            </div>
+            <button
+              className={`profile-toggle ${notifGoals ? 'on' : ''}`}
+              onClick={() => setNotifGoals((v) => !v)}
+            >
+              <span className="profile-toggle-knob" />
+            </button>
           </div>
-          <button
-            className={`profile-toggle ${notifGoals ? 'on' : ''}`}
-            onClick={() => setNotifGoals((v) => !v)}
-          >
-            <span className="profile-toggle-knob" />
-          </button>
-        </div>
 
-        <div className="profile-toggle-row">
-          <div className="profile-toggle-info">
-            <span className="profile-toggle-label">Match Start</span>
-            <span className="profile-toggle-desc">Notified when a match kicks off</span>
+          <div className="profile-toggle-row">
+            <div className="profile-toggle-info">
+              <span className="profile-toggle-label">Match Start</span>
+              <span className="profile-toggle-desc">Notified when a match kicks off</span>
+            </div>
+            <button
+              className={`profile-toggle ${notifMatchStart ? 'on' : ''}`}
+              onClick={() => setNotifMatchStart((v) => !v)}
+            >
+              <span className="profile-toggle-knob" />
+            </button>
           </div>
-          <button
-            className={`profile-toggle ${notifMatchStart ? 'on' : ''}`}
-            onClick={() => setNotifMatchStart((v) => !v)}
-          >
-            <span className="profile-toggle-knob" />
-          </button>
-        </div>
 
-        <div className="profile-toggle-row">
-          <div className="profile-toggle-info">
-            <span className="profile-toggle-label">Half Time</span>
-            <span className="profile-toggle-desc">Half time score updates</span>
+          <div className="profile-toggle-row">
+            <div className="profile-toggle-info">
+              <span className="profile-toggle-label">Half Time</span>
+              <span className="profile-toggle-desc">Half time score updates</span>
+            </div>
+            <button
+              className={`profile-toggle ${notifHalfTime ? 'on' : ''}`}
+              onClick={() => setNotifHalfTime((v) => !v)}
+            >
+              <span className="profile-toggle-knob" />
+            </button>
           </div>
-          <button
-            className={`profile-toggle ${notifHalfTime ? 'on' : ''}`}
-            onClick={() => setNotifHalfTime((v) => !v)}
-          >
-            <span className="profile-toggle-knob" />
-          </button>
-        </div>
 
-        <div className="profile-toggle-row">
-          <div className="profile-toggle-info">
-            <span className="profile-toggle-label">Full Time</span>
-            <span className="profile-toggle-desc">Final score notifications</span>
+          <div className="profile-toggle-row">
+            <div className="profile-toggle-info">
+              <span className="profile-toggle-label">Full Time</span>
+              <span className="profile-toggle-desc">Final score notifications</span>
+            </div>
+            <button
+              className={`profile-toggle ${notifFullTime ? 'on' : ''}`}
+              onClick={() => setNotifFullTime((v) => !v)}
+            >
+              <span className="profile-toggle-knob" />
+            </button>
           </div>
-          <button
-            className={`profile-toggle ${notifFullTime ? 'on' : ''}`}
-            onClick={() => setNotifFullTime((v) => !v)}
-          >
-            <span className="profile-toggle-knob" />
-          </button>
-        </div>
-
-        <div className="profile-toggle-row">
-          <div className="profile-toggle-info">
-            <span className="profile-toggle-label">Transfer News</span>
-            <span className="profile-toggle-desc">Breaking transfer updates</span>
-          </div>
-          <button
-            className={`profile-toggle ${notifTransfers ? 'on' : ''}`}
-            onClick={() => setNotifTransfers((v) => !v)}
-          >
-            <span className="profile-toggle-knob" />
-          </button>
         </div>
       </div>
 
       {/* Error / success + save button */}
-      {error && <p className="profile-error">{error}</p>}
+      {error && (
+        <div className="profile-error">
+          <IonIcon icon={lockClosedOutline} />
+          {error}
+        </div>
+      )}
 
-      <button className="profile-save-btn" onClick={handleSaveProfile}>
-        {saved ? (
+      <button 
+        className="profile-save-btn" 
+        onClick={handleSaveProfile}
+        disabled={saving}
+      >
+        {saving ? (
+          <>
+            <IonSpinner name="crescent" className="profile-save-spinner" />
+            Saving...
+          </>
+        ) : saved ? (
           <>
             <IonIcon icon={checkmarkOutline} />
-            Saved
+            Saved Successfully
           </>
         ) : (
           'Save Changes'

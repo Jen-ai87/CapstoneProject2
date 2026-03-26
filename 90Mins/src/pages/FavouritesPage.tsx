@@ -1,28 +1,268 @@
-import { useState } from 'react';
-import { IonIcon } from '@ionic/react';
-import { starOutline, addOutline, closeOutline, lockClosedOutline } from 'ionicons/icons';
+import { useState, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
+import { IonIcon, IonSpinner } from '@ionic/react';
+import { starOutline, addOutline, closeOutline, lockClosedOutline, trophyOutline, calendarOutline, flashOutline, notificationsOutline } from 'ionicons/icons';
 import FavouriteCard from '../components/FavouriteCard';
 import { favouriteTeams } from '../data/favourites';
-import { teams } from '../data/teams';
-import { getLeagueById } from '../data/leagues';
-import { FavouriteTeam } from '../data/types';
+import { getLeagueById, getTeamById, getAllTeams, mapCompetitionCodeToLeagueId } from '../data/dataHelpers';
+import { teams as staticTeams } from '../data/teams';
+import { FavouriteTeam, Match } from '../data/types';
 import { useAuth } from '../context/AuthContext';
+import footballApi from '../services/footballApi';
+import { mapApiMatchToMatch } from '../services/apiMapper';
+import { showErrorToast, showInfoToast } from '../services/toastNotification';
+import Logger from '../services/logger';
+import { useMatchReminders } from '../hooks/useMatchReminders';
 import './FavouritesPage.css';
+
+// Check if we should use mock data
+const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === 'true';
+
+const logger = new Logger('FavouritesPage');
 
 const FavouritesPage: React.FC = () => {
   const { isAuthenticated, openAuthModal } = useAuth();
+  const history = useHistory();
   const [favourites, setFavourites] = useState<FavouriteTeam[]>(favouriteTeams);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loadingMatches, setLoadingMatches] = useState(false);
+
+  // Setup match reminders for upcoming matches
+  const { isActive: remindersActive } = useMatchReminders({
+    enabled: isAuthenticated && !USE_MOCK_DATA,
+    onReminder: (match) => {
+      const title = `${match.homeTeam.name} vs ${match.awayTeam.name}`;
+      const message = `Match starting in 15 minutes at ${match._kickoffTime}`;
+      logger.info(`[Reminder] ${title} - ${message}`);
+      showInfoToast(`⏰ ${message} - ${title}`);
+    },
+  });
+
+  // Fetch next matches for all favourite teams on mount
+  useEffect(() => {
+    if (isAuthenticated && !USE_MOCK_DATA) {
+      fetchNextMatches();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
+
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatMatchDate = (date: Date): string => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]} ${date.getDate()}`;
+  };
+
+  const formatMatchTime = (date: Date): string => {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const meridiem = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${meridiem}`;
+  };
+
+  const fetchNextMatches = async (teamsList = favourites) => {
+    setLoadingMatches(true);
+    try {
+      // Include live matches from mock data
+      const { liveMatches } = await import('../data/matches');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      // Fetch matches for next 14 days to ensure we get upcoming matches
+      const datePromises = [];
+      for (let i = 0; i < 14; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        const dateStr = formatDate(date);
+        datePromises.push(
+          footballApi.getFixturesByDate(dateStr)
+            .then(response => ({ date: dateStr, response }))
+            .catch(err => {
+              return null;
+            })
+        );
+      }
+
+      const results = await Promise.all(datePromises);
+      const allMatches: Array<Match & { utcDate?: string }> = [];
+
+      // Add live matches
+      allMatches.push(...liveMatches);
+
+      // Process all matches
+      for (const result of results) {
+        if (result && result.response) {
+          const response = result.response as any;
+          if (response.matches && Array.isArray(response.matches)) {
+            for (const apiMatch of response.matches) {
+              try {
+                // Extract league ID from competition code
+                const competitionCode = apiMatch.competition?.code || '';
+                const leagueId = mapCompetitionCodeToLeagueId(competitionCode, 'other');
+                const match = mapApiMatchToMatch(apiMatch, leagueId);
+                if (match.status === 'upcoming') {
+                  // Store the original utcDate for proper date formatting
+                  allMatches.push({ ...match, utcDate: apiMatch.utcDate });
+                }
+              } catch (err) {
+                // Silently skip matches that fail to map
+              }
+            }
+          }
+        }
+      }
+
+      // Update favourites with next match data
+      const updatedFavourites = teamsList.map(fav => {
+        const team = getTeamById(fav.teamId);
+        if (!team) {
+          return fav;
+        }
+
+        // Better team name normalizer that handles special characters and variations
+        const normalizeTeamName = (name: string): string => {
+          let normalized = name
+            .toLowerCase()
+            // Replace special characters and umlauts (ü->u, ö->o, ä->a)
+            .replace(/[ü]/g, 'u')
+            .replace(/[ö]/g, 'o')
+            .replace(/[ä]/g, 'a')
+            .replace(/[é]/g, 'e')
+            .replace(/[è]/g, 'e')
+            // Remove club type prefixes
+            .replace(/^(fc|cf|ac|sc|bk|afc|cfc|rb)\s+/i, '')
+            // Remove remaining special characters but keep spaces
+            .replace(/[^a-z0-9\s]/g, '')
+            // Normalize spaces
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          // Handle common city name variations (German vs English)
+          normalized = normalized
+            .replace(/\bmunchen\b/g, 'munich')  // München -> Munich
+            .replace(/\bköln\b/g, 'cologne')    // Köln -> Cologne
+            .replace(/\bdüsseldorf\b/g, 'dusseldorf')
+            .replace(/\blyon\b/g, 'lyon')
+            .replace(/\bsão paulo\b/g, 'sao paulo')
+            .replace(/\bmönchengladbach\b/g, 'moenchengladbach') // M'gladbach normalization
+            .replace(/\bm\s*gladbach\b/g, 'moenchengladbach');
+          
+          return normalized;
+        };
+
+        // Find next match for this team (match by ID or by name as fallback)
+        const teamMatches = allMatches.filter(match => {
+          const isHomeMatchById = match.homeTeam.teamId === team.id;
+          const isAwayMatchById = match.awayTeam.teamId === team.id;
+          
+          const teamNameNormalized = normalizeTeamName(team.name);
+          const homeTeamNormalized = normalizeTeamName(match.homeTeam.name || '');
+          const awayTeamNormalized = normalizeTeamName(match.awayTeam.name || '');
+          
+          // Check for exact match or if one contains the other (for name variations)
+          const isHomeMatchByName = homeTeamNormalized && (
+            homeTeamNormalized === teamNameNormalized || 
+            homeTeamNormalized.includes(teamNameNormalized) ||
+            teamNameNormalized.includes(homeTeamNormalized)
+          );
+          const isAwayMatchByName = awayTeamNormalized && (
+            awayTeamNormalized === teamNameNormalized ||
+            awayTeamNormalized.includes(teamNameNormalized) ||
+            teamNameNormalized.includes(awayTeamNormalized)
+          );
+          
+          return isHomeMatchById || isAwayMatchById || isHomeMatchByName || isAwayMatchByName;
+        });
+
+        if (teamMatches.length === 0) {
+          return { ...fav, nextMatch: null };
+        }
+
+        // Sort by utcDate to get the earliest match
+        teamMatches.sort((a, b) => {
+          const dateA = a.utcDate ? new Date(a.utcDate).getTime() : 0;
+          const dateB = b.utcDate ? new Date(b.utcDate).getTime() : 0;
+          return dateA - dateB;
+        });
+
+        const nextMatch = teamMatches[0];
+        
+        // Determine if team is home or away (check by ID first, then by name)
+        const teamNameNormalized = normalizeTeamName(team.name);
+        const homeTeamNormalized = normalizeTeamName(nextMatch.homeTeam.name || '');
+        const awayTeamNormalized = normalizeTeamName(nextMatch.awayTeam.name || '');
+        
+        const isHomeById = nextMatch.homeTeam.teamId === team.id;
+        const isAwayById = nextMatch.awayTeam.teamId === team.id;
+        const isHomeByName = homeTeamNormalized && (
+          homeTeamNormalized === teamNameNormalized || 
+          homeTeamNormalized.includes(teamNameNormalized) ||
+          teamNameNormalized.includes(homeTeamNormalized)
+        );
+        
+        const isHome = isHomeById || (isHomeByName && !isAwayById);
+        const opponentTeamId = isHome ? nextMatch.awayTeam.teamId : nextMatch.homeTeam.teamId;
+        const opponentTeam = getTeamById(opponentTeamId);
+        
+        // Use the actual opponent name from the match data
+        const opponentName = isHome 
+          ? (opponentTeam?.name || nextMatch.awayTeam.name || 'Unknown')
+          : (opponentTeam?.name || nextMatch.homeTeam.name || 'Unknown');
+
+        // Parse match date/time from utcDate
+        let matchDateStr = formatMatchDate(new Date());
+        let matchTimeStr = nextMatch.kickoff || 'TBA';
+        
+        if (nextMatch.utcDate) {
+          const matchDateTime = new Date(nextMatch.utcDate);
+          matchDateStr = formatMatchDate(matchDateTime);
+          matchTimeStr = formatMatchTime(matchDateTime);
+        }
+
+        return {
+          ...fav,
+          nextMatch: {
+            opponent: opponentName,
+            date: matchDateStr,
+            time: matchTimeStr,
+          },
+        };
+      });
+
+      setFavourites(updatedFavourites);
+    } catch (err) {
+      logger.error('Failed to fetch next matches:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch matches';
+      showErrorToast('FETCH_ERROR', `Could not load next matches: ${errorMsg}`);
+    } finally {
+      setLoadingMatches(false);
+    }
+  };
 
   const handleRemove = (teamId: string) => {
     setFavourites((prev) => prev.filter((f) => f.teamId !== teamId));
   };
 
+  const handleTeamClick = (teamId: string) => {
+    history.push(`/club/${teamId}`);
+  };
+
   const handleAdd = (teamId: string) => {
     if (favourites.some((f) => f.teamId === teamId)) return;
-    setFavourites((prev) => [...prev, { teamId, nextMatch: null }]);
+    const newFavourites = [...favourites, { teamId, nextMatch: null }];
+    setFavourites(newFavourites);
     setSearchQuery('');
+    
+    // Refresh match data after adding a team (pass new list)
+    if (!USE_MOCK_DATA) {
+      fetchNextMatches(newFavourites);
+    }
   };
 
   const handleToggleSearch = () => {
@@ -30,14 +270,17 @@ const FavouritesPage: React.FC = () => {
     setSearchQuery('');
   };
 
-  // Filter teams for search — exclude already favourited, match by name
+  // Filter teams for search — use getAllTeams() to include both static and API teams
+  const allTeams = getAllTeams(); // This includes both API cached teams and static teams
+  const availableTeams = allTeams.filter((t) => !favourites.some((f) => f.teamId === t.id));
+  
   const searchResults = searchQuery.trim().length > 0
-    ? teams.filter(
-        (t) =>
-          !favourites.some((f) => f.teamId === t.id) &&
-          t.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ? availableTeams.filter((t) =>
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.abbreviation.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.city?.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : [];
+    : availableTeams; // Show all available teams when search is empty
 
   const upcomingCount = favourites.filter((f) => f.nextMatch !== null).length;
 
@@ -47,16 +290,23 @@ const FavouritesPage: React.FC = () => {
       <div className="favourites-page">
         <div className="favourites-page-header">
           <h1 className="favourites-title">My Favourites</h1>
-          <p className="favourites-subtitle">Track your favourite teams</p>
+          <p className="favourites-subtitle">Track your favourite teams and never miss a match</p>
         </div>
 
         <div className="favourites-auth-guard">
-          <IonIcon icon={lockClosedOutline} className="auth-guard-icon" />
-          <p className="auth-guard-title">Sign in required</p>
-          <p className="auth-guard-subtitle">Please sign in to view and manage your favourite teams</p>
-          <button className="auth-guard-btn" onClick={() => openAuthModal('signin')}>
-            Sign In
-          </button>
+          <div className="auth-guard-icon-wrapper">
+            <IonIcon icon={lockClosedOutline} className="auth-guard-icon" />
+          </div>
+          <h3 className="auth-guard-title">Sign in required</h3>
+          <p className="auth-guard-subtitle">Create an account or sign in to start following your favorite teams and get personalized updates</p>
+          <div className="auth-guard-actions">
+            <button className="auth-guard-btn auth-guard-btn-primary" onClick={() => openAuthModal('signin')}>
+              Sign In
+            </button>
+            <button className="auth-guard-btn auth-guard-btn-secondary" onClick={() => openAuthModal('signup')}>
+              Create Account
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -67,7 +317,56 @@ const FavouritesPage: React.FC = () => {
       {/* Page heading */}
       <div className="favourites-page-header">
         <h1 className="favourites-title">My Favourites</h1>
-        <p className="favourites-subtitle">Track your favourite teams</p>
+        <p className="favourites-subtitle">Track your favourite teams and never miss a match</p>
+      </div>
+
+      {/* Stats cards at top */}
+      <div className="favourites-stats-grid">
+        <div className="stat-card-modern">
+          <div className="stat-icon-wrapper stat-icon-teams">
+            <IonIcon icon={trophyOutline} />
+          </div>
+          <div className="stat-content">
+            {loadingMatches ? (
+              <IonSpinner name="crescent" className="stat-spinner" />
+            ) : (
+              <>
+                <span className="stat-value-modern">{favourites.length}</span>
+                <span className="stat-label-modern">Teams Following</span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="stat-card-modern">
+          <div className="stat-icon-wrapper stat-icon-upcoming">
+            <IonIcon icon={calendarOutline} />
+          </div>
+          <div className="stat-content">
+            {loadingMatches ? (
+              <IonSpinner name="crescent" className="stat-spinner" />
+            ) : (
+              <>
+                <span className="stat-value-modern">{upcomingCount}</span>
+                <span className="stat-label-modern">Upcoming Matches</span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="stat-card-modern">
+          <div className="stat-icon-wrapper stat-icon-live">
+            <IonIcon icon={flashOutline} />
+          </div>
+          <div className="stat-content">
+            {loadingMatches ? (
+              <IonSpinner name="crescent" className="stat-spinner" />
+            ) : (
+              <>
+                <span className="stat-value-modern">0</span>
+                <span className="stat-label-modern">Live Now</span>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Section header + search container */}
@@ -77,6 +376,12 @@ const FavouritesPage: React.FC = () => {
           <div className="favourites-section-left">
             <IonIcon icon={starOutline} className="favourites-star-icon" />
             <span className="favourites-section-label">My Favourites</span>
+            {loadingMatches && (
+              <span className="loading-indicator">
+                <IonSpinner name="crescent" className="loading-spinner-small" />
+                <span className="loading-text">Updating matches...</span>
+              </span>
+            )}
           </div>
           <button className="add-team-btn" onClick={handleToggleSearch}>
             <IonIcon icon={showSearch ? closeOutline : addOutline} />
@@ -97,14 +402,18 @@ const FavouritesPage: React.FC = () => {
               autoFocus
             />
             {/* Search results */}
-            {searchResults.length > 0 && (
+            {searchQuery.trim().length === 0 ? null : searchResults.length > 0 ? (
               <div className="search-results">
                 {searchResults.map((team) => {
                   const league = getLeagueById(team.leagueId);
                   return (
                     <div key={team.id} className="search-result-item">
                       <div className="search-result-left">
-                        <span className="search-result-abbr">{team.abbreviation}</span>
+                        {team.logo ? (
+                          <img src={team.logo} alt={team.name} className="search-result-logo" loading="lazy" />
+                        ) : (
+                          <span className="search-result-abbr">{team.abbreviation}</span>
+                        )}
                         <div className="search-result-info">
                           <span className="search-result-name">{team.name}</span>
                           <span className="search-result-league">{league?.name}</span>
@@ -113,6 +422,7 @@ const FavouritesPage: React.FC = () => {
                       <button
                         className="search-result-add-btn"
                         onClick={() => handleAdd(team.id)}
+                        aria-label={`Add ${team.name} to favourites`}
                       >
                         <IonIcon icon={addOutline} />
                       </button>
@@ -120,41 +430,46 @@ const FavouritesPage: React.FC = () => {
                   );
                 })}
               </div>
+            ) : (
+              <div className="search-no-results">
+                <p>No teams found matching "{searchQuery}"</p>
+                {allTeams.some((t) => t.name.toLowerCase().includes(searchQuery.toLowerCase())) && (
+                  <p style={{ fontSize: '12px', marginTop: '8px', opacity: '0.7' }}>
+                    This team may already be in your favourites
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}
       </div>
 
       {/* Favourite team cards */}
-      <div className="favourites-list">
-        {favourites.map((fav) => (
-          <FavouriteCard
-            key={fav.teamId}
-            favourite={fav}
-            onRemove={handleRemove}
-          />
-        ))}
-        {favourites.length === 0 && (
-          <div className="favourites-empty">
-            <p>No favourite teams yet. Add a team to get started!</p>
+      <div className="favourites-list-wrapper">
+        {favourites.length > 0 ? (
+          <div className="favourites-list">
+            {favourites.map((fav) => (
+              <FavouriteCard
+                key={fav.teamId}
+                favourite={fav}
+                onRemove={handleRemove}
+                onClick={() => handleTeamClick(fav.teamId)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="favourites-empty-modern">
+            <div className="empty-icon-wrapper">
+              <IonIcon icon={starOutline} className="empty-icon-large" />
+            </div>
+            <h3 className="empty-title-large">No favourite teams yet</h3>
+            <p className="empty-subtitle-large">Start following teams to get quick access to their fixtures, standings, and live updates</p>
+            <button className="empty-add-btn" onClick={handleToggleSearch}>
+              <IonIcon icon={addOutline} />
+              <span>Add Your First Team</span>
+            </button>
           </div>
         )}
-      </div>
-
-      {/* Stats row */}
-      <div className="favourites-stats">
-        <div className="stat-card">
-          <span className="stat-label">Teams Following</span>
-          <span className="stat-value">{favourites.length}</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Upcoming Matches</span>
-          <span className="stat-value">{upcomingCount}</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Live Now</span>
-          <span className="stat-value">1</span>
-        </div>
       </div>
     </div>
   );

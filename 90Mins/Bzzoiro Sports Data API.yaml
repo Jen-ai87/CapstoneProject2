@@ -1,0 +1,1185 @@
+openapi: 3.0.3
+info:
+  title: Bzzoiro Sports Data API
+  version: 1.0.0
+  description: Free REST API for football data and ML predictions. Access leagues,
+    teams, events, live scores, odds, player stats, and CatBoost-powered match predictions
+    across 30+ leagues.
+  contact:
+    email: bzzoiro@proton.me
+  license:
+    name: Free
+paths:
+  /api/events/:
+    get:
+      operationId: events_list
+      description: Returns football matches with odds. Defaults to next 7 days if
+        no date filters. Cached for 2 minutes.
+      summary: List football matches
+      parameters:
+      - in: query
+        name: date_from
+        schema:
+          type: string
+        description: Start date (YYYY-MM-DD)
+      - in: query
+        name: date_to
+        schema:
+          type: string
+        description: End date (YYYY-MM-DD)
+      - in: query
+        name: league
+        schema:
+          type: integer
+        description: Filter by league ID
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: 'Filter by status: notstarted, inprogress, 1st_half, halftime,
+          2nd_half, finished, postponed, cancelled'
+      tags:
+      - Events
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventList'
+          description: ''
+  /api/events/{id}/:
+    get:
+      operationId: events_retrieve
+      description: Returns details for a specific match by ID.
+      summary: Get match details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this event.
+        required: true
+      tags:
+      - Events
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: ''
+  /api/leagues/:
+    get:
+      operationId: leagues_list
+      description: Returns all active football leagues and tournaments. Cached for
+        5 minutes.
+      summary: List active football leagues
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Leagues
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLeagueList'
+          description: ''
+  /api/leagues/{id}/:
+    get:
+      operationId: leagues_retrieve
+      description: Returns details for a specific league by ID.
+      summary: Get league details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this league.
+        required: true
+      tags:
+      - Leagues
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/League'
+          description: ''
+  /api/live/:
+    get:
+      operationId: live_list
+      description: Returns only matches currently in play with real-time scores, incidents,
+        and statistics. Cached for 30 seconds.
+      summary: List live matches
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Live Scores
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLiveScoreList'
+          description: ''
+  /api/live/{id}/:
+    get:
+      operationId: live_retrieve
+      description: Returns live details for a specific match.
+      summary: Get live match details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this event.
+        required: true
+      tags:
+      - Live Scores
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiveScore'
+          description: ''
+  /api/player-stats/:
+    get:
+      operationId: player_stats_list
+      description: Returns per-match player statistics. 139,000+ records. Filter by
+        player, event, or team. Cached for 5 minutes.
+      summary: List player statistics
+      parameters:
+      - in: query
+        name: event
+        schema:
+          type: integer
+        description: Filter by event ID
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: player
+        schema:
+          type: integer
+        description: Filter by player ID
+      - in: query
+        name: team
+        schema:
+          type: integer
+        description: Filter by team ID
+      tags:
+      - Player Stats
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlayerStatList'
+          description: ''
+  /api/player-stats/{id}/:
+    get:
+      operationId: player_stats_retrieve
+      description: Returns a single per-match player statistics record.
+      summary: Get player stat record
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player event statistics.
+        required: true
+      tags:
+      - Player Stats
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStat'
+          description: ''
+  /api/players/:
+    get:
+      operationId: players_list
+      description: Returns football player profiles. 8,900+ players. Filter by team,
+        nationality, or position. Cached for 5 minutes.
+      summary: List football players
+      parameters:
+      - in: query
+        name: nationality
+        schema:
+          type: string
+        description: Filter by nationality (case-insensitive)
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: position
+        schema:
+          type: string
+        description: 'Filter by position: G, D, M, F'
+      - in: query
+        name: team
+        schema:
+          type: integer
+        description: Filter by team ID
+      tags:
+      - Players
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlayerList'
+          description: ''
+  /api/players/{id}/:
+    get:
+      operationId: players_retrieve
+      description: Returns details for a specific player by ID.
+      summary: Get player details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player.
+        required: true
+      tags:
+      - Players
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+          description: ''
+  /api/predictions/:
+    get:
+      operationId: predictions_list
+      description: Returns CatBoost ML predictions for football matches. Defaults
+        to upcoming matches. Cached for 2 minutes.
+      summary: List ML predictions
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: upcoming
+        schema:
+          type: string
+        description: 'Filter to upcoming matches only (default: true)'
+      tags:
+      - Predictions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPredictionList'
+          description: ''
+  /api/predictions/{id}/:
+    get:
+      operationId: predictions_retrieve
+      description: Returns ML prediction details for a specific match.
+      summary: Get prediction details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this match prediction.
+        required: true
+      tags:
+      - Predictions
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prediction'
+          description: ''
+  /api/teams/:
+    get:
+      operationId: teams_list
+      description: Returns all football teams. Filter by country. Cached for 5 minutes.
+      summary: List football teams
+      parameters:
+      - in: query
+        name: country
+        schema:
+          type: string
+        description: Filter by country (case-insensitive)
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Teams
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeamList'
+          description: ''
+  /api/teams/{id}/:
+    get:
+      operationId: teams_retrieve
+      description: Returns details for a specific team by ID.
+      summary: Get team details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this team.
+        required: true
+      tags:
+      - Teams
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: ''
+components:
+  schemas:
+    BlankEnum:
+      enum:
+      - ''
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Internal event ID
+        api_id:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: External event ID
+        league:
+          allOf:
+          - $ref: '#/components/schemas/League'
+          readOnly: true
+        home_team:
+          type: string
+          description: Home team name
+          maxLength: 200
+        away_team:
+          type: string
+          description: Away team name
+          maxLength: 200
+        home_team_obj:
+          allOf:
+          - $ref: '#/components/schemas/Team'
+          readOnly: true
+        away_team_obj:
+          allOf:
+          - $ref: '#/components/schemas/Team'
+          readOnly: true
+        event_date:
+          type: string
+          format: date-time
+          description: Kick-off time (ISO 8601)
+        status:
+          type: string
+          description: 'Match status: notstarted, inprogress, 1st_half, halftime,
+            2nd_half, finished, postponed, cancelled'
+          maxLength: 50
+        home_score:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Home goals (null if not started)
+        away_score:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Away goals (null if not started)
+        current_minute:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Current minute (live matches only)
+        period:
+          type: string
+          description: 'Period: 1T, HT, 2T, FT'
+          maxLength: 20
+        odds_home:
+          type: number
+          format: double
+          description: Home win odds (1X2)
+        odds_draw:
+          type: number
+          format: double
+          description: Draw odds (1X2)
+        odds_away:
+          type: number
+          format: double
+          description: Away win odds (1X2)
+        odds_over_15:
+          type: number
+          format: double
+          description: Over 1.5 goals odds
+        odds_over_25:
+          type: number
+          format: double
+          description: Over 2.5 goals odds
+        odds_over_35:
+          type: number
+          format: double
+          description: Over 3.5 goals odds
+        odds_under_15:
+          type: number
+          format: double
+          description: Under 1.5 goals odds
+        odds_under_25:
+          type: number
+          format: double
+          description: Under 2.5 goals odds
+        odds_under_35:
+          type: number
+          format: double
+          description: Under 3.5 goals odds
+        odds_btts_yes:
+          type: number
+          format: double
+          description: Both Teams To Score Yes odds
+        odds_btts_no:
+          type: number
+          format: double
+          description: Both Teams To Score No odds
+      required:
+      - api_id
+      - away_team
+      - away_team_obj
+      - event_date
+      - home_team
+      - home_team_obj
+      - id
+      - league
+    League:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Internal league ID
+        api_id:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: External league ID (Sofascore)
+        name:
+          type: string
+          description: League name (e.g. "Premier League")
+          maxLength: 200
+        country:
+          type: string
+          description: Country (e.g. "England")
+          maxLength: 100
+        season_id:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: Current season ID
+      required:
+      - api_id
+      - id
+      - name
+      - season_id
+    LiveScore:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        api_id:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: ID del evento en Sofascore API
+        league:
+          allOf:
+          - $ref: '#/components/schemas/League'
+          readOnly: true
+        home_team:
+          type: string
+          maxLength: 200
+        away_team:
+          type: string
+          maxLength: 200
+        home_team_obj:
+          allOf:
+          - $ref: '#/components/schemas/Team'
+          readOnly: true
+        away_team_obj:
+          allOf:
+          - $ref: '#/components/schemas/Team'
+          readOnly: true
+        event_date:
+          type: string
+          format: date-time
+        status:
+          type: string
+          description: Estado del partido
+          maxLength: 50
+        home_score:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        away_score:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        current_minute:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Minuto actual del partido
+        period:
+          type: string
+          description: 1st half, 2nd half, HT, etc
+          maxLength: 20
+        incidents:
+          nullable: true
+          description: 'Match incidents: goals, cards, substitutions [{type, minute,
+            player_name, is_home}]'
+        live_stats:
+          nullable: true
+          description: 'Live statistics: {home: {ball_possession, total_shots, ...},
+            away: {...}}'
+      required:
+      - api_id
+      - away_team
+      - away_team_obj
+      - event_date
+      - home_team
+      - home_team_obj
+      - id
+      - league
+    PaginatedEventList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+    PaginatedLeagueList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/League'
+    PaginatedLiveScoreList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LiveScore'
+    PaginatedPlayerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+    PaginatedPlayerStatList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerStat'
+    PaginatedPredictionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Prediction'
+    PaginatedTeamList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Team'
+    Player:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Internal player ID
+        api_id:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: External player ID (use for /img/player/{api_id}/)
+        name:
+          type: string
+          description: Full name
+          maxLength: 200
+        short_name:
+          type: string
+          description: Short name (e.g. "M. Salah")
+          maxLength: 100
+        position:
+          description: |-
+            Position: G (Goalkeeper), D (Defender), M (Midfielder), F (Forward)
+
+            * `G` - Portero
+            * `D` - Defensa
+            * `M` - Centrocampista
+            * `F` - Delantero
+          oneOf:
+          - $ref: '#/components/schemas/PositionEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        jersey_number:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Shirt number
+        height:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+          description: Height in cm
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+          description: Date of birth (YYYY-MM-DD)
+        nationality:
+          type: string
+          description: Country of nationality
+          maxLength: 100
+        market_value:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+          description: Market value in EUR
+        current_team:
+          allOf:
+          - $ref: '#/components/schemas/Team'
+          readOnly: true
+      required:
+      - api_id
+      - current_team
+      - id
+      - name
+    PlayerStat:
+      type: object
+      properties:
+        event:
+          type: string
+          readOnly: true
+          description: 'Match info: id, api_id, home_team, away_team, event_date,
+            scores'
+        minutes_played:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        rating:
+          type: number
+          format: double
+          nullable: true
+        goals:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        goal_assist:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        expected_goals:
+          type: number
+          format: double
+          nullable: true
+        expected_assists:
+          type: number
+          format: double
+          nullable: true
+        total_shots:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        shots_on_target:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        total_pass:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        accurate_pass:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        key_pass:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        total_cross:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        accurate_cross:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        total_long_balls:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        accurate_long_balls:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        touches:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        duel_won:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        duel_lost:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        aerial_won:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        aerial_lost:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        total_tackle:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        won_tackle:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        total_clearance:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        interception:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        ball_recovery:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        dispossessed:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        possession_lost:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        was_fouled:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        fouls:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        yellow_card:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        red_card:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        saves:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        goals_conceded:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+      required:
+      - event
+    PositionEnum:
+      enum:
+      - G
+      - D
+      - M
+      - F
+      type: string
+      description: |-
+        * `G` - Portero
+        * `D` - Defensa
+        * `M` - Centrocampista
+        * `F` - Delantero
+    PredictedResultEnum:
+      enum:
+      - H
+      - D
+      - A
+      type: string
+      description: |-
+        * `H` - Home Win
+        * `D` - Draw
+        * `A` - Away Win
+    Prediction:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        event:
+          allOf:
+          - $ref: '#/components/schemas/Event'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        prob_home_win:
+          type: number
+          format: double
+          description: Home win probability (0-100)
+        prob_draw:
+          type: number
+          format: double
+          description: Draw probability (0-100)
+        prob_away_win:
+          type: number
+          format: double
+          description: Away win probability (0-100)
+        predicted_result:
+          allOf:
+          - $ref: '#/components/schemas/PredictedResultEnum'
+          description: |-
+            Predicted result: H (Home), D (Draw), A (Away)
+
+            * `H` - Home Win
+            * `D` - Draw
+            * `A` - Away Win
+        expected_home_goals:
+          type: number
+          format: double
+          description: Expected goals for home team
+        expected_away_goals:
+          type: number
+          format: double
+          description: Expected goals for away team
+        prob_over_15:
+          type: number
+          format: double
+          nullable: true
+          description: P(total goals > 1.5) in 0-100
+        prob_over_25:
+          type: number
+          format: double
+          description: P(total goals > 2.5) in 0-100
+        prob_over_35:
+          type: number
+          format: double
+          nullable: true
+          description: P(total goals > 3.5) in 0-100
+        prob_btts_yes:
+          type: number
+          format: double
+          description: P(both teams score) in 0-100
+        confidence:
+          type: number
+          format: double
+          description: Model confidence score (0-1)
+        model_version:
+          type: string
+          description: ML model version (e.g. "CatBoost v4.0")
+          maxLength: 50
+        most_likely_score:
+          type: string
+          description: Most probable scoreline (e.g. "2-1")
+          maxLength: 10
+        favorite:
+          type: string
+          nullable: true
+          description: 'Which team is favored: H or A'
+          maxLength: 1
+        favorite_prob:
+          type: number
+          format: double
+          nullable: true
+          description: Favorite's win probability
+        favorite_recommend:
+          type: boolean
+          description: Model recommends betting on the favorite
+        over_15_recommend:
+          type: boolean
+          description: Model recommends Over 1.5
+        over_25_recommend:
+          type: boolean
+          description: Model recommends Over 2.5
+        over_35_recommend:
+          type: boolean
+          description: Model recommends Over 3.5
+        btts_recommend:
+          type: boolean
+          description: Model recommends BTTS
+        winner_recommend:
+          type: boolean
+          description: Model recommends "has a winner" (no draw)
+      required:
+      - confidence
+      - created_at
+      - event
+      - expected_away_goals
+      - expected_home_goals
+      - id
+      - model_version
+      - predicted_result
+      - prob_away_win
+      - prob_btts_yes
+      - prob_draw
+      - prob_home_win
+      - prob_over_25
+    Team:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Internal team ID
+        api_id:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: External team ID (use for /img/team/{api_id}/)
+        name:
+          type: string
+          description: Full team name
+          maxLength: 200
+        short_name:
+          type: string
+          description: Short name (e.g. "FCB")
+          maxLength: 50
+        country:
+          type: string
+          description: Country of origin
+          maxLength: 100
+      required:
+      - api_id
+      - id
+      - name
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
+servers:
+- url: https://sports.bzzoiro.com
+  description: Production
+tags:
+- name: Leagues
+  description: Football leagues and tournaments
+- name: Teams
+  description: Football teams across all leagues
+- name: Events
+  description: Football matches with odds
+- name: Live Scores
+  description: Real-time live match data
+- name: Predictions
+  description: CatBoost ML match predictions
+- name: Players
+  description: Football player profiles
+- name: Player Stats
+  description: Per-match player statistics

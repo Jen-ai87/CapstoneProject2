@@ -1,8 +1,7 @@
 import { Match } from './types';
 
 /**
- * Live matches — currently in progress
- * These match the Figma mockup exactly
+ * Live matches
  */
 export const liveMatches: Match[] = [
   {
@@ -11,7 +10,7 @@ export const liveMatches: Match[] = [
     homeTeam: { teamId: 'man-utd', score: 2 },
     awayTeam: { teamId: 'liverpool', score: 2 },
     status: 'live',
-    minute: "67'",
+    minute: "67",
     kickoff: null,
     venue: 'Old Trafford',
   },
@@ -31,7 +30,7 @@ export const liveMatches: Match[] = [
     homeTeam: { teamId: 'ac-milan', score: 1 },
     awayTeam: { teamId: 'inter-milan', score: 1 },
     status: 'live',
-    minute: "82'",
+    minute: "82",
     kickoff: null,
     venue: 'San Siro',
   },
@@ -54,7 +53,7 @@ export const upcomingMatches: Match[] = [
 ];
 
 /**
- * Finished matches — for "Yesterday" tab
+ * Finished matches 
  */
 export const finishedMatches: Match[] = [
   {

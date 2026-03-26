@@ -1,46 +1,267 @@
-.league-filter {
-  padding: 4px 20px 16px;
+/* Expanded mode (home page) - inline display */
+.league-filter-inline {
+  display: inline-block;
 }
 
-.league-filter-label {
+.league-filter-inline-button {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  text-decoration: underline;
+  text-underline-offset: 4px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-size: 14px;
-  margin-bottom: 12px;
+  gap: 6px;
 }
 
 .league-filter-icon {
-  font-size: 16px;
+  font-size: 18px;
 }
 
-.league-tabs {
+.league-filter-inline-button:hover {
+  color: var(--text-primary);
+}
+
+/* Expanded inline options */
+.league-filter-inline-expanded {
   display: flex;
-  gap: 8px;
+  flex-direction: row;
   flex-wrap: wrap;
+  gap: 16px;
 }
 
-.league-tab {
+.league-filter-inline-option {
   background: none;
-  border: 1px solid var(--pill-stroke);
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 400;
+  padding: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.league-filter-inline-option:hover {
+  color: var(--text-primary);
+}
+
+.league-filter-inline-option.active {
+  color: var(--accent-color);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Legacy / remove redundant styles */
+.league-filter-expanded {
+  display: none;
+}
+
+.league-filter-expanded-compact {
+  display: none;
+}
+
+.league-filter-selection-btn {
+  display: none;
+}
+
+.league-filter-expanded-overlay {
+  display: none;
+}
+
+.league-filter-overlay {
+  display: none;
+}
+
+.league-filter-expanded-list {
+  display: none;
+}
+
+.league-filter-pill {
+  display: none;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdown-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Compact league filter */
+.league-filter-compact {
+  position: relative;
+  display: inline-block;
+}
+
+/* Toggle button */
+.league-filter-toggle {
+  background: none;
+  border: none;
   color: var(--text-secondary);
   font-size: 13px;
-  padding: 6px 14px;
-  border-radius: 0;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: color var(--transition-fast);
+  padding: 0;
+}
+
+.league-filter-toggle:hover {
+  color: var(--text-primary);
+}
+
+.league-filter-toggle.active {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.league-filter-toggle.expanded {
+  color: var(--accent-color);
+}
+
+.filter-icon {
+  display: none;
+}
+
+.filter-label {
   white-space: nowrap;
 }
 
-.league-tab:hover {
-  background: var(--hover-bg);
-  color: var(--text-primary);
+@media (max-width: 480px) {
+  .filter-label {
+    display: none;
+  }
+  
+  .league-filter-toggle {
+    padding: 8px 12px;
+  }
 }
 
-.league-tab.active {
-  background: var(--pill-selected-bg);
+.filter-badge {
+  display: none;
+}
+
+/* Compact overlay (for dropdown) */
+.league-filter-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 220px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  animation: dropdown-slide 0.2s ease;
+  overflow: hidden;
+}
+
+@media (max-width: 480px) {
+  .league-filter-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    min-width: 100%;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    max-height: 60vh;
+    animation: slide-up 0.3s ease;
+  }
+  
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
+
+/* Dropdown header */
+.league-filter-dropdown-header {
+  display: none;
+}
+
+.dropdown-title {
+  display: none;
+}
+
+.dropdown-close {
+  display: none;
+}
+
+/* League list */
+.league-filter-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+@media (max-width: 480px) {
+  .league-filter-list {
+    max-height: calc(60vh - 60px);
+  }
+}
+
+/* League item */
+.league-filter-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(117, 117, 117, 0.2);
   color: var(--text-primary);
-  border-color: var(--pill-stroke);
+  font-size: 14px;
   font-weight: 400;
+  padding: 12px 16px;
+  border-radius: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin: 0;
+}
+
+.league-filter-item:last-child {
+  border-bottom: none;
+}
+
+.league-filter-item:hover {
+  background: var(--hover-bg);
+  color: var(--accent-color);
+}
+
+.league-filter-item.active {
+  background: rgba(66, 165, 245, 0.1);
+  color: var(--accent-color);
+  font-weight: 600;
 }

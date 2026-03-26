@@ -4,13 +4,17 @@ import { Redirect, Route, Switch } from 'react-router-dom';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import AuthModal from './components/AuthModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import MatchesPage from './pages/MatchesPage';
 import StandingsPage from './pages/StandingsPage';
 import FavouritesPage from './pages/FavouritesPage';
 import MatchDetailPage from './pages/MatchDetailPage';
 import ProfilePage from './pages/ProfilePage';
-import Page from './pages/Page';
+import LeaguePage from './pages/LeaguePage';
+import ClubPage from './pages/ClubPage';
+import PlayerPage from './pages/PlayerPage';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -46,39 +50,56 @@ setupIonicReact();
 
 const App: React.FC = () => {
   return (
-    <IonApp>
-      <AuthProvider>
-        <IonReactRouter>
-          <Header />
-          <AuthModal />
-          <div className="app-layout">
-            <Sidebar />
-            <main className="main-content">
-              <Switch>
-                <Route path="/profile" exact>
-                  <ProfilePage />
-                </Route>
-                <Route path="/match/:matchId" exact>
-                  <MatchDetailPage />
-                </Route>
-                <Route path="/matches" exact>
-                  <MatchesPage />
-                </Route>
-                <Route path="/standings" exact>
-                  <StandingsPage />
-                </Route>
-                <Route path="/favourites" exact>
-                  <FavouritesPage />
-                </Route>
-                <Route path="/" exact>
-                  <Redirect to="/matches" />
-                </Route>
-              </Switch>
-            </main>
-          </div>
-        </IonReactRouter>
+    <ErrorBoundary>
+      <IonApp>
+        <AuthProvider>
+          <NotificationProvider>
+            <IonReactRouter>
+              <Header />
+              <AuthModal />
+              <div className="app-layout">
+                <Sidebar />
+                <main className="main-content">
+                <Switch>
+                  <Route path="/profile" exact>
+                    <ProfilePage />
+                  </Route>
+                  <Route path="/match/:matchId" exact>
+                    <MatchDetailPage />
+                  </Route>
+                  <Route 
+                    path="/league/:leagueId" 
+                    exact
+                    render={(props) => <LeaguePage key={props.match.params.leagueId} />}
+                  />
+                  <Route 
+                    path="/club/:teamId" 
+                    exact
+                    render={(props) => <ClubPage key={props.match.params.teamId} />}
+                  />
+                  <Route path="/player/:playerId" exact>
+                    <PlayerPage />
+                  </Route>
+                  <Route path="/matches" exact>
+                    <MatchesPage />
+                  </Route>
+                  <Route path="/standings" exact>
+                    <StandingsPage />
+                  </Route>
+                  <Route path="/favourites" exact>
+                    <FavouritesPage />
+                  </Route>
+                  <Route path="/" exact>
+                    <Redirect to="/matches" />
+                  </Route>
+                </Switch>
+              </main>
+            </div>
+          </IonReactRouter>
+        </NotificationProvider>
       </AuthProvider>
     </IonApp>
+    </ErrorBoundary>
   );
 };
 

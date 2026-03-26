@@ -20,8 +20,17 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 /* ── Provider ── */
+const AUTH_STORAGE_KEY = 'auth_user';
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalView, setAuthModalView] = useState<'signin' | 'signup'>('signin');
 
@@ -32,6 +41,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!found) return 'No account found with this email';
     if (found.password !== password) return 'Incorrect password';
     setUser(found);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(found));
     setShowAuthModal(false);
     return null;
   }, []);
@@ -46,12 +56,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     users.push(newUser); // add to in-memory array
     setUser(newUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
     setShowAuthModal(false);
     return null;
   }, []);
 
   const signOut = useCallback(() => {
     setUser(null);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
   }, []);
 
   const updateUser = useCallback((updates: Partial<Pick<User, 'name' | 'email' | 'password'>>) => {
@@ -61,6 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Also update the in-memory users array so sign-in stays consistent
       const idx = users.findIndex((u) => u.id === prev.id);
       if (idx !== -1) users[idx] = updated;
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, []);
