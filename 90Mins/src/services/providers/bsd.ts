@@ -12,30 +12,17 @@ if (!API_KEY) {
 }
 
 /**
- * Base fetch function with BSD API authentication.
- * In production, routes through corsproxy.io to bypass CORS restrictions.
- * Locally, uses the Vite dev proxy at /api.
+ * Base fetch function — always routes through corsproxy.io.
+ * Token passed as URL param (avoids CORS preflight).
  */
 async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}): Promise<T> {
-  let fetchUrl: string;
+  const targetUrl = new URL(`${BSD_API_BASE}${endpoint}`);
+  Object.entries(params).forEach(([key, value]) => {
+    targetUrl.searchParams.append(key, value);
+  });
+  if (API_KEY) targetUrl.searchParams.append('token', API_KEY);
 
-  if (import.meta.env.PROD) {
-    // Build full BSD URL with token as query param (avoids CORS preflight)
-    const targetUrl = new URL(`${BSD_API_BASE}${endpoint}`);
-    Object.entries(params).forEach(([key, value]) => {
-      targetUrl.searchParams.append(key, value);
-    });
-    if (API_KEY) targetUrl.searchParams.append('token', API_KEY);
-    fetchUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl.toString())}`;
-  } else {
-    // Locally: Vite proxies /api → sports.bzzoiro.com
-    const url = new URL(`/api${endpoint}`, window.location.origin);
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
-    });
-    fetchUrl = url.toString();
-  }
-
+  const fetchUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl.toString())}`;
   const response = await fetch(fetchUrl, { method: 'GET' });
 
   if (!response.ok) {
