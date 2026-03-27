@@ -5,14 +5,25 @@
  */
 
 const API_KEY = import.meta.env.VITE_BSD_API_KEY;
-const BASE_URL = '/api';
 
 if (!API_KEY) {
   console.error('❌ BSD API Key not found in environment variables!');
 }
 
 async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}): Promise<T> {
-  const url = new URL(`${BASE_URL}${endpoint}`, window.location.origin);
+  let url: URL;
+
+  if (import.meta.env.PROD) {
+    // In production (Vercel), route through the serverless proxy function
+    // endpoint looks like "/live/" or "/events/" — strip the leading slash for bsdPath
+    const bsdPath = endpoint.replace(/^\//, '');
+    url = new URL('/api/proxy', window.location.origin);
+    url.searchParams.set('bsdPath', bsdPath);
+  } else {
+    // In local dev, Vite proxy forwards /api → BSD API directly
+    url = new URL(`/api${endpoint}`, window.location.origin);
+  }
+
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.append(key, value);
   });
