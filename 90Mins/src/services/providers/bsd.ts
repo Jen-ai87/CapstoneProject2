@@ -20,12 +20,12 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}
   let fetchUrl: string;
 
   if (import.meta.env.PROD) {
-    // Build the full BSD target URL with query params
+    // Build full BSD URL with token as query param (avoids CORS preflight)
     const targetUrl = new URL(`${BSD_API_BASE}${endpoint}`);
     Object.entries(params).forEach(([key, value]) => {
       targetUrl.searchParams.append(key, value);
     });
-    // Wrap with CORS proxy for production
+    if (API_KEY) targetUrl.searchParams.append('token', API_KEY);
     fetchUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl.toString())}`;
   } else {
     // Locally: Vite proxies /api → sports.bzzoiro.com
@@ -36,15 +36,7 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}
     fetchUrl = url.toString();
   }
 
-  const headers: Record<string, string> = {};
-  if (API_KEY) {
-    headers['Authorization'] = `Token ${API_KEY}`;
-  }
-
-  const response = await fetch(fetchUrl, {
-    method: 'GET',
-    headers,
-  });
+  const response = await fetch(fetchUrl, { method: 'GET' });
 
   if (!response.ok) {
     const errorText = await response.text();
