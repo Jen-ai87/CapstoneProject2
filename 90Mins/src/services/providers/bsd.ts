@@ -22,7 +22,7 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}
   });
   if (API_KEY) targetUrl.searchParams.append('token', API_KEY);
 
-  const fetchUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl.toString())}`;
+  const fetchUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl.toString())}`;
   const response = await fetch(fetchUrl, { method: 'GET' });
 
   if (!response.ok) {
