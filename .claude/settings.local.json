@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:capstone-project2-az2y.vercel.app)",
+      "Bash(npx vercel:*)",
+      "Bash(cat /Users/admin/Downloads/project/CapstoneProject2/90Mins/api/[...path].js)"
+    ]
+  }
+}

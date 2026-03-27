@@ -5,25 +5,19 @@
  */
 
 const API_KEY = import.meta.env.VITE_BSD_API_KEY;
-const BSD_API_BASE = 'https://sports.bzzoiro.com/api';
+const BASE_URL = '/api';
 
 if (!API_KEY) {
   console.error('❌ BSD API Key not found in environment variables!');
 }
 
-/**
- * Base fetch function — always routes through corsproxy.io.
- * Token passed as URL param (avoids CORS preflight).
- */
 async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}): Promise<T> {
-  const targetUrl = new URL(`${BSD_API_BASE}${endpoint}`);
+  const url = new URL(`${BASE_URL}${endpoint}`, window.location.origin);
   Object.entries(params).forEach(([key, value]) => {
-    targetUrl.searchParams.append(key, value);
+    url.searchParams.append(key, value);
   });
-  if (API_KEY) targetUrl.searchParams.append('token', API_KEY);
 
-  const fetchUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl.toString())}`;
-  const response = await fetch(fetchUrl, { method: 'GET' });
+  const response = await fetch(url.toString(), { method: 'GET' });
 
   if (!response.ok) {
     const errorText = await response.text();
