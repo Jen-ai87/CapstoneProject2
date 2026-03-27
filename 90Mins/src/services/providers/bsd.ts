@@ -4,31 +4,44 @@
  * Free API with unlimited requests, no rate limits
  */
 
-// Always use the local proxy path — in dev Vite proxies /api,
-// in production the Vercel serverless function at api/[...path].js proxies it.
-const BASE_URL = '/api';
 const API_KEY = import.meta.env.VITE_BSD_API_KEY;
+const BSD_API_BASE = 'https://sports.bzzoiro.com/api';
 
-// Verify token is loaded correctly (should be 45 characters)
 if (!API_KEY) {
   console.error('❌ BSD API Key not found in environment variables!');
 }
 
 /**
- * Base fetch function with BSD API authentication
+ * Base fetch function with BSD API authentication.
+ * In production, routes through corsproxy.io to bypass CORS restrictions.
+ * Locally, uses the Vite dev proxy at /api.
  */
 async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}): Promise<T> {
-  const url = new URL(`${BASE_URL}${endpoint}`, window.location.origin);
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.append(key, value);
-  });
+  let fetchUrl: string;
+
+  if (import.meta.env.PROD) {
+    // Build the full BSD target URL with query params
+    const targetUrl = new URL(`${BSD_API_BASE}${endpoint}`);
+    Object.entries(params).forEach(([key, value]) => {
+      targetUrl.searchParams.append(key, value);
+    });
+    // Wrap with CORS proxy for production
+    fetchUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl.toString())}`;
+  } else {
+    // Locally: Vite proxies /api → sports.bzzoiro.com
+    const url = new URL(`/api${endpoint}`, window.location.origin);
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.append(key, value);
+    });
+    fetchUrl = url.toString();
+  }
 
   const headers: Record<string, string> = {};
   if (API_KEY) {
     headers['Authorization'] = `Token ${API_KEY}`;
   }
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(fetchUrl, {
     method: 'GET',
     headers,
   });
