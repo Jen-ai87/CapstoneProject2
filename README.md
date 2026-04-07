@@ -1,6 +1,6 @@
 # 90mins
 
-**90mins** is a football live-score and match-tracking application. It provides live fixtures, standings, team/player views, reminders, and user favorites with a local demo authentication flow.
+**90mins** is a football live-score and match-tracking application. It provides live fixtures, standings, team/player views, reminders, and user favorites with Supabase-backed authentication and user data sync.
 
 This repository contains:
 
@@ -44,6 +44,7 @@ External services used:
 
 - BSD API: https://sports.bzzoiro.com
 - SportsAPIPro: https://sportsapipro.com
+- Supabase (Auth + Postgres): https://supabase.com
 - Vercel (optional deployment): https://vercel.com
 
 ## 4. Project Setup
@@ -67,6 +68,8 @@ VITE_API_PROVIDER=bsd
 VITE_BSD_API_KEY=your_bsd_token
 VITE_SPORTSAPIPRO_API_KEY=your_sportsapipro_key
 VITE_USE_MOCK_DATA=false
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 Notes:
@@ -74,6 +77,7 @@ Notes:
 - `VITE_API_PROVIDER` supports `bsd` or `sportsapipro`.
 - In local development, Vite proxy settings in `90Mins/vite.config.ts` forward `/api` requests.
 - In production, serverless proxy handlers in `api/` can be used for BSD requests.
+- Do not commit real keys to Git. Keep them in local `.env` and in deployment environment variable settings.
 
 ## 6. How to Run the Software
 
@@ -112,14 +116,17 @@ npm run lint
 
 ## 8. Login and Required Access Information
 
-The app currently uses local demo auth data (in-memory + localStorage), not a production identity provider.
+Authentication is handled by Supabase Auth.
 
-Demo sign-in accounts:
+For local testing:
 
-- Email: `john@example.com` | Password: `password123`
-- Email: `jane@example.com` | Password: `password123`
+- Users can sign up and sign in directly from the app Auth modal.
+- If Supabase environment variables are missing, browsing public match data still works, but account features (sign in, favourites sync, profile sync, cloud notification history) will not work.
 
-You can also create a new account from the Sign Up flow inside the app.
+Professor/local evaluation tip:
+
+- For full feature testing, provide valid Supabase URL + anon key in `90Mins/.env`.
+- For read-only UI exploration without account features, the app can still be opened and used for non-authenticated pages.
 
 ## 9. Deployment Notes
 
@@ -131,8 +138,18 @@ You can also create a new account from the Sign Up flow inside the app.
 
 When deploying, set required environment variables in your hosting platform (for example, Vercel Project Settings -> Environment Variables).
 
+For Supabase auth redirects in deployed environments, set Supabase Auth URL configuration:
+
+- Site URL: `https://capstone-project2-az2y.vercel.app/`
+- Redirect URLs: deployed URL(s) plus local dev URL(s), for example:
+	- `https://capstone-project2-az2y.vercel.app/`
+	- `https://capstone-project2-az2y.vercel.app/*`
+	- `http://localhost:5173`
+	- `http://localhost:5173/*`
+
 ## 10. Quick Troubleshooting
 
 - If API data is missing, verify `VITE_API_PROVIDER` and API keys.
 - If you get CORS or request errors in production, check proxy routes in `api/`.
-- If favorites/profile state looks inconsistent, clear browser localStorage and sign in again.
+- If account features are unavailable, verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+- If user-specific state looks inconsistent after config changes, sign out and sign back in.
