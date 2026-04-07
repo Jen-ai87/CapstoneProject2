@@ -231,12 +231,105 @@
   outline-offset: 2px;
 }
 
+.add-team-shell {
+  min-width: 132px;
+  display: flex;
+  justify-content: flex-end;
+  transition: min-width 0.24s ease, flex 0.24s ease;
+}
+
+.add-team-shell.open {
+  flex: 0 1 280px;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.add-team-search-inline {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--app-bg);
+  border: 1px solid var(--accent-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 3px rgba(0, 184, 219, 0.08);
+  animation: searchExpandIn 0.18s ease;
+}
+
+@keyframes searchExpandIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.add-team-search-icon {
+  font-size: 18px;
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.add-team-search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.add-team-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.add-team-search-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.add-team-search-close:hover {
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
 /* Search panel */
 .search-panel {
   padding: 0 20px 16px;
   border-top: 1px solid var(--card-border);
   position: relative;
   z-index: 10;
+}
+
+.search-results-inline {
+  padding: 0 20px 16px;
+  border-top: 1px solid var(--card-border);
+}
+
+.search-hint-inline {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--app-bg);
+  color: var(--text-muted);
+  font-size: 13px;
+  border: 1px dashed var(--card-border);
 }
 
 .search-panel-label {
@@ -575,4 +668,31 @@
 .auth-guard-btn-secondary:hover {
   background: var(--hover-bg);
   border-color: var(--accent-color);
+}
+
+@media (max-width: 768px) {
+  .favourites-section-bar {
+    gap: 12px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .add-team-shell {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .add-team-shell.open {
+    flex: 1;
+    max-width: none;
+  }
+
+  .add-team-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .add-team-search-inline {
+    max-width: none;
+  }
 }

@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 import { IonIcon, IonSpinner } from '@ionic/react';
-import { starOutline, addOutline, closeOutline, lockClosedOutline, trophyOutline, calendarOutline, flashOutline, notificationsOutline } from 'ionicons/icons';
+import { starOutline, addOutline, closeOutline, lockClosedOutline, trophyOutline, calendarOutline, flashOutline } from 'ionicons/icons';
 import FavouriteCard from '../components/FavouriteCard';
-import { favouriteTeams } from '../data/favourites';
 import { getLeagueById, getTeamById, getAllTeams, mapCompetitionCodeToLeagueId } from '../data/dataHelpers';
-import { teams as staticTeams } from '../data/teams';
 import { FavouriteTeam, Match } from '../data/types';
 import { useAuth } from '../context/AuthContext';
 import footballApi from '../services/footballApi';
@@ -13,24 +11,41 @@ import { mapApiMatchToMatch } from '../services/apiMapper';
 import { showErrorToast, showInfoToast } from '../services/toastNotification';
 import Logger from '../services/logger';
 import { useMatchReminders } from '../hooks/useMatchReminders';
+import {
+  addUserFavouriteTeam,
+  fetchUserFavouriteTeamIds,
+  getCachedUserFavouriteTeamIds,
+  removeUserFavouriteTeam,
+} from '../services/userFavourites';
 import './FavouritesPage.css';
 
 // Check if we should use mock data
 const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
 const logger = new Logger('FavouritesPage');
+const NEXT_MATCH_LOOKAHEAD_DAYS = 5;
+
+const mapTeamIdsToFavourites = (teamIds: string[]): FavouriteTeam[] =>
+  teamIds.map((teamId) => ({ teamId, nextMatch: null }));
+
+const areTeamIdListsEqual = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((id, idx) => id === b[idx]);
 
 const FavouritesPage: React.FC = () => {
-  const { isAuthenticated, openAuthModal } = useAuth();
+  const { isAuthenticated, openAuthModal, user } = useAuth();
   const history = useHistory();
-  const [favourites, setFavourites] = useState<FavouriteTeam[]>(favouriteTeams);
+  const [favourites, setFavourites] = useState<FavouriteTeam[]>([]);
+  const [isLoadingFavourites, setIsLoadingFavourites] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingMatches, setLoadingMatches] = useState(false);
+  const searchPanelRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // Setup match reminders for upcoming matches
-  const { isActive: remindersActive } = useMatchReminders({
+  useMatchReminders({
     enabled: isAuthenticated && !USE_MOCK_DATA,
+    userId: user?.id,
     onReminder: (match) => {
       const title = `${match.homeTeam.name} vs ${match.awayTeam.name}`;
       const message = `Match starting in 15 minutes at ${match._kickoffTime}`;
@@ -39,13 +54,84 @@ const FavouritesPage: React.FC = () => {
     },
   });
 
-  // Fetch next matches for all favourite teams on mount
+  // Load saved favourites for the current signed-in user.
   useEffect(() => {
-    if (isAuthenticated && !USE_MOCK_DATA) {
-      fetchNextMatches();
+    let cancelled = false;
+
+    const loadFavourites = async () => {
+      if (!isAuthenticated || !user?.id) {
+        setFavourites([]);
+        setLoadingMatches(false);
+        return;
+      }
+
+      const cachedTeamIds = getCachedUserFavouriteTeamIds(user.id);
+      const cachedFavourites = mapTeamIdsToFavourites(cachedTeamIds);
+
+      setFavourites(cachedFavourites);
+      setIsLoadingFavourites(cachedFavourites.length === 0);
+
+      if (!USE_MOCK_DATA && cachedFavourites.length > 0) {
+        void fetchNextMatches(cachedFavourites, { showSpinner: false });
+      }
+
+      const teamIds = await fetchUserFavouriteTeamIds(user.id);
+      if (cancelled) return;
+
+      if (areTeamIdListsEqual(teamIds, cachedTeamIds)) {
+        setIsLoadingFavourites(false);
+        return;
+      }
+
+      const loadedFavourites = mapTeamIdsToFavourites(teamIds);
+      setFavourites(loadedFavourites);
+      setIsLoadingFavourites(false);
+
+      if (!USE_MOCK_DATA && loadedFavourites.length > 0) {
+        await fetchNextMatches(loadedFavourites, { showSpinner: true });
+      } else {
+        setLoadingMatches(false);
+      }
+    };
+
+    loadFavourites();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    if (!showSearch) return;
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (searchPanelRef.current && !searchPanelRef.current.contains(target)) {
+        setShowSearch(false);
+        setSearchQuery('');
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSearch(false);
+        setSearchQuery('');
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showSearch]);
+
+  useEffect(() => {
+    if (showSearch) {
+      requestAnimationFrame(() => searchInputRef.current?.focus());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+  }, [showSearch]);
 
   const formatDate = (date: Date): string => {
     const year = date.getFullYear();
@@ -67,50 +153,48 @@ const FavouritesPage: React.FC = () => {
     return `${displayHours}:${String(minutes).padStart(2, '0')} ${meridiem}`;
   };
 
-  const fetchNextMatches = async (teamsList = favourites) => {
-    setLoadingMatches(true);
+  const fetchNextMatches = async (teamsList = favourites, options: { showSpinner?: boolean } = {}) => {
+    const { showSpinner = false } = options;
+
+    if (showSpinner) {
+      setLoadingMatches(true);
+    }
+
     try {
-      // Include live matches from mock data
       const { liveMatches } = await import('../data/matches');
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      // Fetch matches for next 14 days to ensure we get upcoming matches
+
       const datePromises = [];
-      for (let i = 0; i < 14; i++) {
+      for (let i = 0; i < NEXT_MATCH_LOOKAHEAD_DAYS; i++) {
         const date = new Date(today);
         date.setDate(date.getDate() + i);
         const dateStr = formatDate(date);
         datePromises.push(
           footballApi.getFixturesByDate(dateStr)
-            .then(response => ({ date: dateStr, response }))
-            .catch(err => {
-              return null;
-            })
+            .then((response) => ({ date: dateStr, response }))
+            .catch(() => null)
         );
       }
 
       const results = await Promise.all(datePromises);
       const allMatches: Array<Match & { utcDate?: string }> = [];
 
-      // Add live matches
       allMatches.push(...liveMatches);
 
-      // Process all matches
       for (const result of results) {
         if (result && result.response) {
           const response = result.response as any;
           if (response.matches && Array.isArray(response.matches)) {
             for (const apiMatch of response.matches) {
               try {
-                // Extract league ID from competition code
                 const competitionCode = apiMatch.competition?.code || '';
                 const leagueId = mapCompetitionCodeToLeagueId(competitionCode, 'other');
                 const match = mapApiMatchToMatch(apiMatch, leagueId);
                 if (match.status === 'upcoming') {
-                  // Store the original utcDate for proper date formatting
                   allMatches.push({ ...match, utcDate: apiMatch.utcDate });
                 }
-              } catch (err) {
+              } catch {
                 // Silently skip matches that fail to map
               }
             }
@@ -118,56 +202,45 @@ const FavouritesPage: React.FC = () => {
         }
       }
 
-      // Update favourites with next match data
-      const updatedFavourites = teamsList.map(fav => {
+      const normalizeTeamName = (name: string): string => {
+        let normalized = name
+          .toLowerCase()
+          .replace(/[ü]/g, 'u')
+          .replace(/[ö]/g, 'o')
+          .replace(/[ä]/g, 'a')
+          .replace(/[é]/g, 'e')
+          .replace(/[è]/g, 'e')
+          .replace(/^(fc|cf|ac|sc|bk|afc|cfc|rb)\s+/i, '')
+          .replace(/[^a-z0-9\s]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        return normalized
+          .replace(/\bmunchen\b/g, 'munich')
+          .replace(/\bköln\b/g, 'cologne')
+          .replace(/\bdüsseldorf\b/g, 'dusseldorf')
+          .replace(/\blyon\b/g, 'lyon')
+          .replace(/\bsão paulo\b/g, 'sao paulo')
+          .replace(/\bmönchengladbach\b/g, 'moenchengladbach')
+          .replace(/\bm\s*gladbach\b/g, 'moenchengladbach');
+      };
+
+      const updatedFavourites = teamsList.map((fav) => {
         const team = getTeamById(fav.teamId);
         if (!team) {
           return fav;
         }
 
-        // Better team name normalizer that handles special characters and variations
-        const normalizeTeamName = (name: string): string => {
-          let normalized = name
-            .toLowerCase()
-            // Replace special characters and umlauts (ü->u, ö->o, ä->a)
-            .replace(/[ü]/g, 'u')
-            .replace(/[ö]/g, 'o')
-            .replace(/[ä]/g, 'a')
-            .replace(/[é]/g, 'e')
-            .replace(/[è]/g, 'e')
-            // Remove club type prefixes
-            .replace(/^(fc|cf|ac|sc|bk|afc|cfc|rb)\s+/i, '')
-            // Remove remaining special characters but keep spaces
-            .replace(/[^a-z0-9\s]/g, '')
-            // Normalize spaces
-            .replace(/\s+/g, ' ')
-            .trim();
-          
-          // Handle common city name variations (German vs English)
-          normalized = normalized
-            .replace(/\bmunchen\b/g, 'munich')  // München -> Munich
-            .replace(/\bköln\b/g, 'cologne')    // Köln -> Cologne
-            .replace(/\bdüsseldorf\b/g, 'dusseldorf')
-            .replace(/\blyon\b/g, 'lyon')
-            .replace(/\bsão paulo\b/g, 'sao paulo')
-            .replace(/\bmönchengladbach\b/g, 'moenchengladbach') // M'gladbach normalization
-            .replace(/\bm\s*gladbach\b/g, 'moenchengladbach');
-          
-          return normalized;
-        };
-
-        // Find next match for this team (match by ID or by name as fallback)
-        const teamMatches = allMatches.filter(match => {
+        const teamMatches = allMatches.filter((match) => {
           const isHomeMatchById = match.homeTeam.teamId === team.id;
           const isAwayMatchById = match.awayTeam.teamId === team.id;
-          
+
           const teamNameNormalized = normalizeTeamName(team.name);
           const homeTeamNormalized = normalizeTeamName(match.homeTeam.name || '');
           const awayTeamNormalized = normalizeTeamName(match.awayTeam.name || '');
-          
-          // Check for exact match or if one contains the other (for name variations)
+
           const isHomeMatchByName = homeTeamNormalized && (
-            homeTeamNormalized === teamNameNormalized || 
+            homeTeamNormalized === teamNameNormalized ||
             homeTeamNormalized.includes(teamNameNormalized) ||
             teamNameNormalized.includes(homeTeamNormalized)
           );
@@ -176,7 +249,7 @@ const FavouritesPage: React.FC = () => {
             awayTeamNormalized.includes(teamNameNormalized) ||
             teamNameNormalized.includes(awayTeamNormalized)
           );
-          
+
           return isHomeMatchById || isAwayMatchById || isHomeMatchByName || isAwayMatchByName;
         });
 
@@ -184,7 +257,6 @@ const FavouritesPage: React.FC = () => {
           return { ...fav, nextMatch: null };
         }
 
-        // Sort by utcDate to get the earliest match
         teamMatches.sort((a, b) => {
           const dateA = a.utcDate ? new Date(a.utcDate).getTime() : 0;
           const dateB = b.utcDate ? new Date(b.utcDate).getTime() : 0;
@@ -192,33 +264,28 @@ const FavouritesPage: React.FC = () => {
         });
 
         const nextMatch = teamMatches[0];
-        
-        // Determine if team is home or away (check by ID first, then by name)
         const teamNameNormalized = normalizeTeamName(team.name);
         const homeTeamNormalized = normalizeTeamName(nextMatch.homeTeam.name || '');
         const awayTeamNormalized = normalizeTeamName(nextMatch.awayTeam.name || '');
-        
+
         const isHomeById = nextMatch.homeTeam.teamId === team.id;
         const isAwayById = nextMatch.awayTeam.teamId === team.id;
         const isHomeByName = homeTeamNormalized && (
-          homeTeamNormalized === teamNameNormalized || 
+          homeTeamNormalized === teamNameNormalized ||
           homeTeamNormalized.includes(teamNameNormalized) ||
           teamNameNormalized.includes(homeTeamNormalized)
         );
-        
+
         const isHome = isHomeById || (isHomeByName && !isAwayById);
         const opponentTeamId = isHome ? nextMatch.awayTeam.teamId : nextMatch.homeTeam.teamId;
         const opponentTeam = getTeamById(opponentTeamId);
-        
-        // Use the actual opponent name from the match data
-        const opponentName = isHome 
+        const opponentName = isHome
           ? (opponentTeam?.name || nextMatch.awayTeam.name || 'Unknown')
           : (opponentTeam?.name || nextMatch.homeTeam.name || 'Unknown');
 
-        // Parse match date/time from utcDate
         let matchDateStr = formatMatchDate(new Date());
         let matchTimeStr = nextMatch.kickoff || 'TBA';
-        
+
         if (nextMatch.utcDate) {
           const matchDateTime = new Date(nextMatch.utcDate);
           matchDateStr = formatMatchDate(matchDateTime);
@@ -241,33 +308,65 @@ const FavouritesPage: React.FC = () => {
       const errorMsg = err instanceof Error ? err.message : 'Failed to fetch matches';
       showErrorToast('FETCH_ERROR', `Could not load next matches: ${errorMsg}`);
     } finally {
-      setLoadingMatches(false);
+      if (showSpinner) {
+        setLoadingMatches(false);
+      }
     }
   };
 
-  const handleRemove = (teamId: string) => {
-    setFavourites((prev) => prev.filter((f) => f.teamId !== teamId));
+  const handleRemove = async (teamId: string) => {
+    if (!user?.id) return;
+
+    const previous = favourites;
+    const next = previous.filter((f) => f.teamId !== teamId);
+    setFavourites(next);
+
+    const result = await removeUserFavouriteTeam(user.id, teamId);
+    if (!result.ok) {
+      setFavourites(previous);
+      showErrorToast('FAVOURITES_ERROR', `Could not remove team: ${result.error || 'Unknown error'}`);
+      return;
+    }
+
+    if (!USE_MOCK_DATA && next.length > 0) {
+      fetchNextMatches(next, { showSpinner: false });
+    }
   };
 
   const handleTeamClick = (teamId: string) => {
     history.push(`/club/${teamId}`);
   };
 
-  const handleAdd = (teamId: string) => {
+  const handleAdd = async (teamId: string) => {
+    if (!user?.id) return;
     if (favourites.some((f) => f.teamId === teamId)) return;
+
+    const previous = favourites;
     const newFavourites = [...favourites, { teamId, nextMatch: null }];
     setFavourites(newFavourites);
     setSearchQuery('');
+
+    const result = await addUserFavouriteTeam(user.id, teamId);
+    if (!result.ok) {
+      setFavourites(previous);
+      showErrorToast('FAVOURITES_ERROR', `Could not save team: ${result.error || 'Unknown error'}`);
+      return;
+    }
     
     // Refresh match data after adding a team (pass new list)
     if (!USE_MOCK_DATA) {
-      fetchNextMatches(newFavourites);
+      fetchNextMatches(newFavourites, { showSpinner: false });
     }
   };
 
   const handleToggleSearch = () => {
-    setShowSearch((prev) => !prev);
-    setSearchQuery('');
+    setShowSearch((prev) => {
+      const next = !prev;
+      if (!next) {
+        setSearchQuery('');
+      }
+      return next;
+    });
   };
 
   // Filter teams for search — use getAllTeams() to include both static and API teams
@@ -370,7 +469,7 @@ const FavouritesPage: React.FC = () => {
       </div>
 
       {/* Section header + search container */}
-      <div className="favourites-section-container">
+      <div className="favourites-section-container" ref={searchPanelRef}>
         {/* Top bar */}
         <div className="favourites-section-bar">
           <div className="favourites-section-left">
@@ -383,31 +482,64 @@ const FavouritesPage: React.FC = () => {
               </span>
             )}
           </div>
-          <button className="add-team-btn" onClick={handleToggleSearch}>
-            <IonIcon icon={showSearch ? closeOutline : addOutline} />
-            <span>{showSearch ? 'Close' : 'Add Team'}</span>
-          </button>
+          <div className={`add-team-shell ${showSearch ? 'open' : ''}`}>
+            {!showSearch ? (
+              <button className="add-team-btn" onClick={handleToggleSearch}>
+                <IonIcon icon={addOutline} />
+                <span>Add Team</span>
+              </button>
+            ) : (
+              <div className="add-team-search-inline">
+                <IonIcon icon={addOutline} className="add-team-search-icon" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  className="add-team-search-input"
+                  placeholder="Search teams to add..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="add-team-search-close"
+                  onClick={() => {
+                    setShowSearch(false);
+                    setSearchQuery('');
+                  }}
+                  aria-label="Close team search"
+                >
+                  <IonIcon icon={closeOutline} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Search panel — shown when Add Team is clicked */}
         {showSearch && (
-          <div className="search-panel">
-            <p className="search-panel-label">Search for a team to add to favourites</p>
-            <input
-              type="text"
-              className="search-panel-input"
-              placeholder="Search teams..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-            />
-            {/* Search results */}
-            {searchQuery.trim().length === 0 ? null : searchResults.length > 0 ? (
+          <div className="search-results-inline">
+            {searchQuery.trim().length === 0 ? (
+              <div className="search-hint-inline">
+                Start typing to search for a team.
+              </div>
+            ) : searchResults.length > 0 ? (
               <div className="search-results">
                 {searchResults.map((team) => {
                   const league = getLeagueById(team.leagueId);
                   return (
-                    <div key={team.id} className="search-result-item">
+                    <div
+                      key={team.id}
+                      className="search-result-item"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleAdd(team.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleAdd(team.id);
+                        }
+                      }}
+                      aria-label={`Add ${team.name} to favourites`}
+                    >
                       <div className="search-result-left">
                         {team.logo ? (
                           <img src={team.logo} alt={team.name} className="search-result-logo" loading="lazy" />
@@ -420,8 +552,12 @@ const FavouritesPage: React.FC = () => {
                         </div>
                       </div>
                       <button
+                        type="button"
                         className="search-result-add-btn"
-                        onClick={() => handleAdd(team.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAdd(team.id);
+                        }}
                         aria-label={`Add ${team.name} to favourites`}
                       >
                         <IonIcon icon={addOutline} />

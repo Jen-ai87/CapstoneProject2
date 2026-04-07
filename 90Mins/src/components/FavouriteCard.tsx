@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { IonIcon } from '@ionic/react';
 import { ellipsisVertical, trashOutline } from 'ionicons/icons';
 import { FavouriteTeam } from '../data/types';
@@ -13,6 +13,7 @@ interface FavouriteCardProps {
 
 const FavouriteCard: React.FC<FavouriteCardProps> = ({ favourite, onRemove, onClick }) => {
   const [showMenu, setShowMenu] = useState(false);
+  const menuWrapperRef = useRef<HTMLDivElement | null>(null);
   const team = getTeamById(favourite.teamId);
   if (!team) return null;
 
@@ -21,14 +22,39 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({ favourite, onRemove, onCl
 
   const handleMenuToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowMenu(!showMenu);
+    if (showMenu) {
+      setShowMenu(false);
+      onRemove(favourite.teamId);
+      return;
+    }
+
+    setShowMenu(true);
   };
 
-  const handleRemoveClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(false);
-    onRemove(favourite.teamId);
-  };
+  useEffect(() => {
+    if (!showMenu) return;
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (menuWrapperRef.current && !menuWrapperRef.current.contains(target)) {
+        setShowMenu(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showMenu]);
 
   return (
     <div className="favourite-card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
@@ -52,25 +78,16 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({ favourite, onRemove, onCl
           )}
         </div>
       </div>
-      <div className="favourite-menu-wrapper">
+      <div className="favourite-menu-wrapper" ref={menuWrapperRef}>
         <button
-          className="favourite-menu-btn"
+          className={`favourite-menu-btn${showMenu ? ' open' : ''}`}
           onClick={handleMenuToggle}
-          aria-label="More options"
+          aria-label={showMenu ? 'Delete favourite team' : 'More options'}
+          aria-expanded={showMenu}
         >
-          <IonIcon icon={ellipsisVertical} />
+          <IonIcon icon={ellipsisVertical} className="favourite-menu-icon favourite-menu-icon-ellipsis" />
+          <IonIcon icon={trashOutline} className="favourite-menu-icon favourite-menu-icon-trash" />
         </button>
-        {showMenu && (
-          <>
-            <div className="favourite-menu-backdrop" onClick={handleMenuToggle} />
-            <div className="favourite-menu-dropdown">
-              <button className="favourite-menu-item" onClick={handleRemoveClick}>
-                <IonIcon icon={trashOutline} />
-                <span>Remove from favourites</span>
-              </button>
-            </div>
-          </>
-        )}
       </div>
     </div>
   );

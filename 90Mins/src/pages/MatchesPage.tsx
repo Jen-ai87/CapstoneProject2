@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useHistory } from 'react-router-dom';
 import { IonIcon, IonSpinner } from '@ionic/react';
 import { calendarOutline, alertCircleOutline, star, chevronDownOutline } from 'ionicons/icons';
@@ -10,14 +10,9 @@ import footballApi, { LEAGUE_IDS } from '../services/footballApi';
 import { mapApiMatchToMatch, ApiMatchesResponse } from '../services/apiMapper';
 import { getLeagueById, addTeamsToCache, createTeamFromAPI, mapCompetitionCodeToLeagueId } from '../data/dataHelpers';
 import { liveMatches as mockLiveMatches, upcomingMatches as mockUpcomingMatches, finishedMatches as mockFinishedMatches, tomorrowMatches as mockTomorrowMatches } from '../data/matches';
-import { favouriteTeams } from '../data/favourites';
 import { getTeamById } from '../data/dataHelpers';
-// Helper: get all matches involving user's followed teams
-const getFollowingMatches = (matches: Match[]): Match[] => {
-  const followedIds = favouriteTeams.map(f => f.teamId);
-  return matches.filter(m => followedIds.includes(m.homeTeam.teamId) || followedIds.includes(m.awayTeam.teamId));
-};
-import { showErrorToast } from '../services/toastNotification';
+import { useAuth } from '../context/AuthContext';
+import { fetchUserFavouriteTeamIds } from '../services/userFavourites';
 import { useLiveScorePoller } from '../hooks/useLiveScorePoller';
 import Logger from '../services/logger';
 
@@ -44,6 +39,7 @@ const logger = new Logger('MatchesPage');
 const MatchesPage: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
+  const { user } = useAuth();
 
   // Read league from URL query param (?league=premier-league)
   const queryLeague = new URLSearchParams(location.search).get('league');
@@ -65,6 +61,13 @@ const MatchesPage: React.FC = () => {
   // Live filter state
   const [showOnlyLive, setShowOnlyLive] = useState(false);
   const [followingCollapsed, setFollowingCollapsed] = useState(false);
+  const [followedTeamIds, setFollowedTeamIds] = useState<string[]>([]);
+  const hasRenderedMatchesRef = useRef(false);
+
+  useEffect(() => {
+    hasRenderedMatchesRef.current =
+      liveMatches.length > 0 || upcomingMatches.length > 0 || finishedMatches.length > 0;
+  }, [liveMatches.length, upcomingMatches.length, finishedMatches.length]);
 
   // Set up live score polling (only for BSD API with unlimited requests)
   const { isActive: isPollingActive } = useLiveScorePoller({
@@ -109,10 +112,16 @@ const MatchesPage: React.FC = () => {
     return Math.round(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const fetchMatches = useCallback(async () => {
+  const fetchMatches = useCallback(async (showSpinner = true) => {
     // Show loading state but don't clear matches yet - keep showing old data
-    setLoading(true);
-    setError(null);
+    if (showSpinner) {
+      setLoading(true);
+    }
+    if (!hasRenderedMatchesRef.current) {
+      setError(null);
+    }
+
+    let hadFetchFailure = false;
     
     try {
       // Use mock data if flag is enabled
@@ -140,7 +149,9 @@ const MatchesPage: React.FC = () => {
           setUpcomingMatches([]);
           setFinishedMatches([]);
         }
-        setLoading(false);
+        if (showSpinner) {
+          setLoading(false);
+        }
         return;
       }
       
@@ -181,25 +192,23 @@ const MatchesPage: React.FC = () => {
               }
             }
           });
-          
-          // Fetch teams for each league with a small delay between requests to avoid rate limiting
-          for (const leagueCode of leaguesToFetch) {
-            try {
-              // Add a small delay between requests
-              await new Promise(resolve => setTimeout(resolve, 300));
-              
-              const leagueTeamsResponse = await footballApi.getCompetitionTeams(leagueCode, currentSeason) as any;
-              if (leagueTeamsResponse?.teams && Array.isArray(leagueTeamsResponse.teams)) {
-                // Convert API teams to Team objects and cache them
-                const teamObjects = leagueTeamsResponse.teams.map((apiTeam: any) =>
-                  createTeamFromAPI(apiTeam.id, apiTeam.name, leagueCodeMap[leagueCode])
-                );
-                addTeamsToCache(teamObjects);
+
+          // Warm team cache in background so match rendering is not blocked by extra API calls.
+          void (async () => {
+            for (const leagueCode of leaguesToFetch) {
+              try {
+                const leagueTeamsResponse = await footballApi.getCompetitionTeams(leagueCode, currentSeason) as any;
+                if (leagueTeamsResponse?.teams && Array.isArray(leagueTeamsResponse.teams)) {
+                  const teamObjects = leagueTeamsResponse.teams.map((apiTeam: any) =>
+                    createTeamFromAPI(apiTeam.id, apiTeam.name, leagueCodeMap[leagueCode])
+                  );
+                  addTeamsToCache(teamObjects);
+                }
+              } catch {
+                // Background cache warming should never block main matches rendering.
               }
-            } catch (err) {
-              // Don't fail the entire page load if team fetching fails
             }
-          }
+          })();
           
           // Get allowed league codes
           const allowedCodes = Object.keys(leagueCodeMap);
@@ -243,10 +252,8 @@ const MatchesPage: React.FC = () => {
           });
         }
       } catch (err) {
+        hadFetchFailure = true;
         logger.error('Error fetching matches from API:', err);
-        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-        setError(`API Error: ${errorMsg}`);
-        showErrorToast('FETCH_ERROR', `Failed to load matches: ${errorMsg}`);
       }
       
       // If no matches found, try fetching from each league individually as fallback
@@ -365,19 +372,59 @@ const MatchesPage: React.FC = () => {
       // If response is null (error occurred), don't clear existing matches
       
     } catch (err) {
+      hadFetchFailure = true;
       logger.error('Error fetching matches:', err);
-      setError('Failed to load matches. Please try again.');
-      showErrorToast('FETCH_ERROR', 'Failed to load matches. Please try again.');
       // Don't clear existing matches on error - keep showing what we have
     } finally {
-      setLoading(false);
+      if (hadFetchFailure && !hasRenderedMatchesRef.current) {
+        setError('Unable to load matches right now. Please try again.');
+      }
+
+      if (showSpinner) {
+        setLoading(false);
+      }
     }
   }, [selectedDate]); // Add selectedDate as dependency
 
   // Fetch matches when date changes
   useEffect(() => {
-    fetchMatches();
+    fetchMatches(true);
   }, [fetchMatches]);
+
+  // Keep the Following section synced with the current user's saved favourites.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadFollowedTeams = async () => {
+      if (!user?.id) {
+        setFollowedTeamIds([]);
+        return;
+      }
+
+      const ids = await fetchUserFavouriteTeamIds(user.id);
+      if (cancelled) return;
+      setFollowedTeamIds(ids);
+    };
+
+    loadFollowedTeams();
+
+    const handleFavouriteUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{ userId?: string }>;
+      if (customEvent.detail?.userId && customEvent.detail.userId !== user?.id) {
+        return;
+      }
+
+      loadFollowedTeams();
+      fetchMatches(false);
+    };
+
+    window.addEventListener('user-favourites-updated', handleFavouriteUpdate as EventListener);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('user-favourites-updated', handleFavouriteUpdate as EventListener);
+    };
+  }, [user?.id, fetchMatches]);
 
   // When user changes league via pill, update the URL too
   const handleLeagueChange = (leagueId: string | null) => {
@@ -412,7 +459,63 @@ const MatchesPage: React.FC = () => {
   const matchesToShow = showOnlyLive
     ? (isToday ? liveMatches : [])
     : [...filteredLiveForDisplay, ...filteredUpcoming, ...filteredFinished];
-  const followingMatches = getFollowingMatches(matchesToShow);
+
+  // Following card should not depend on active league filter; it should show all favourite-team matches.
+  const allMatchesForFollowing = showOnlyLive
+    ? (isToday ? liveMatches : [])
+    : [...(isToday ? liveMatches : []), ...upcomingMatches, ...finishedMatches];
+
+  const normalizeTeamName = (name: string | undefined): string =>
+    (name || '')
+      .toLowerCase()
+      .replace(/[ü]/g, 'u')
+      .replace(/[ö]/g, 'o')
+      .replace(/[ä]/g, 'a')
+      .replace(/[é]/g, 'e')
+      .replace(/[è]/g, 'e')
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const followingMatches = allMatchesForFollowing.filter((match) => {
+    const homeIds = [
+      match.homeTeam.teamId,
+      String(match.homeTeam.apiTeamId || ''),
+      String(match.homeTeam.bsdInternalId || ''),
+      String(match.homeTeam.bsdApiId || ''),
+    ].filter(Boolean);
+
+    const awayIds = [
+      match.awayTeam.teamId,
+      String(match.awayTeam.apiTeamId || ''),
+      String(match.awayTeam.bsdInternalId || ''),
+      String(match.awayTeam.bsdApiId || ''),
+    ].filter(Boolean);
+
+    const homeName = normalizeTeamName(match.homeTeam.name);
+    const awayName = normalizeTeamName(match.awayTeam.name);
+
+    return followedTeamIds.some((followedId) => {
+      if (homeIds.includes(followedId) || awayIds.includes(followedId)) {
+        return true;
+      }
+
+      const followedTeam = getTeamById(followedId);
+      if (!followedTeam) return false;
+
+      const followedApiIds = [
+        String(followedTeam.bsdTeamId || ''),
+        String(followedTeam.bsdApiId || ''),
+      ].filter(Boolean);
+
+      if (followedApiIds.some((id) => homeIds.includes(id) || awayIds.includes(id))) {
+        return true;
+      }
+
+      const followedName = normalizeTeamName(followedTeam.name);
+      return homeName === followedName || awayName === followedName;
+    });
+  });
 
   return (
     <div className="matches-page">
@@ -457,7 +560,7 @@ const MatchesPage: React.FC = () => {
         </div>
       )}
       {/* Loading state */}
-      {loading && (
+      {loading && matchesToShow.length === 0 && (
         <div className="matches-loading">
           <IonSpinner name="crescent" />
           <p>Loading matches...</p>
@@ -468,7 +571,7 @@ const MatchesPage: React.FC = () => {
       {error && (
         <div className="matches-error">
           <p className="error-message">{error}</p>
-          <button className="retry-button" onClick={fetchMatches}>
+          <button className="retry-button" onClick={() => fetchMatches(true)}>
             Retry
           </button>
         </div>

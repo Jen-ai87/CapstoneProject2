@@ -122,12 +122,50 @@
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
   flex-shrink: 0;
+  position: relative;
+  width: 40px;
+  height: 40px;
 }
 
 .favourite-menu-btn:hover {
   color: var(--accent-color);
   background: rgba(0, 184, 219, 0.1);
   border-color: rgba(0, 184, 219, 0.2);
+}
+
+.favourite-menu-btn.open {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.favourite-menu-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 18px;
+  height: 18px;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.favourite-menu-icon-ellipsis {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+.favourite-menu-icon-trash {
+  opacity: 0;
+  transform: translateY(3px) scale(0.7);
+}
+
+.favourite-menu-btn.open .favourite-menu-icon-ellipsis {
+  opacity: 0;
+  transform: rotate(20deg) scale(0.7);
+}
+
+.favourite-menu-btn.open .favourite-menu-icon-trash {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 /* Backdrop to close menu when clicking outside */
