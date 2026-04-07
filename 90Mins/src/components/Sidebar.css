@@ -17,12 +17,7 @@
 
 @media (max-width: 768px) {
   .app-sidebar {
-    transform: translateX(-100%);
-    transition: transform var(--transition-normal);
-  }
-  
-  .app-sidebar.mobile-open {
-    transform: translateX(0);
+    display: none;
   }
 }
 

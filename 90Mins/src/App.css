@@ -12,6 +12,12 @@
   overflow-y: auto;
 }
 
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
+
 /* Override Ionic defaults for our dark layout */
 ion-app {
   --ion-background-color: var(--app-bg);
