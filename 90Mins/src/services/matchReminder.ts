@@ -1,7 +1,7 @@
 import footballApi from './footballApi';
 import { getTeamById } from '../data/dataHelpers';
-import { favouriteTeams } from '../data/favourites';
 import Logger from './logger';
+import { fetchUserFavouriteTeamIds } from './userFavourites';
 
 interface ReminderState {
   matchId: string;
@@ -17,6 +17,7 @@ class MatchReminderService {
   private remindersMap = new Map<string, ReminderState>();
   private listeners: Set<ReminderCallback> = new Set();
   private lastCheckTime = 0;
+  private currentUserId: string | null = null;
 
   constructor() {
     this.loadRemindersFromStorage();
@@ -54,8 +55,9 @@ class MatchReminderService {
   /**
    * Get favourite team IDs
    */
-  private getFavouriteTeamIds(): string[] {
-    return favouriteTeams.map(fav => fav.teamId);
+  private async getFavouriteTeamIds(): Promise<string[]> {
+    if (!this.currentUserId) return [];
+    return fetchUserFavouriteTeamIds(this.currentUserId);
   }
 
   /**
@@ -70,8 +72,7 @@ class MatchReminderService {
   /**
    * Check if a match involves a favourite team
    */
-  private isFavouriteTeamMatch(apiMatch: any): boolean {
-    const favouriteTeamIds = this.getFavouriteTeamIds();
+  private isFavouriteTeamMatch(apiMatch: any, favouriteTeamIds: string[]): boolean {
     if (favouriteTeamIds.length === 0) return false;
 
     const homeIds = this.getApiTeamIds(apiMatch.homeTeam);
@@ -105,7 +106,7 @@ class MatchReminderService {
    */
   private async checkUpcomingMatches(): Promise<void> {
     try {
-      const favouriteTeamIds = this.getFavouriteTeamIds();
+      const favouriteTeamIds = await this.getFavouriteTeamIds();
       if (favouriteTeamIds.length === 0) return;
 
       // Fetch today's matches
@@ -126,7 +127,7 @@ class MatchReminderService {
         if (apiMatch.status !== 'NOT_STARTED') continue;
 
         // Only check favourite team matches
-        if (!this.isFavouriteTeamMatch(apiMatch)) continue;
+        if (!this.isFavouriteTeamMatch(apiMatch, favouriteTeamIds)) continue;
 
         // Only check matches with kickoff time
         if (!apiMatch.kickoff) continue;
@@ -190,6 +191,13 @@ class MatchReminderService {
         this.logger.error('[MatchReminder] Listener error:', err);
       }
     });
+  }
+
+  /**
+   * Set the active user for reminder lookups.
+   */
+  public setUserId(userId: string | null): void {
+    this.currentUserId = userId;
   }
 
   /**

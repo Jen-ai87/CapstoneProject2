@@ -125,8 +125,23 @@ async function pollLiveMatches() {
       return;
     }
 
-    // Filter for live matches only
-    const liveMatches = matches.filter((m: any) => m.status === 'live' || m.status === 'IN_PLAY');
+    // Filter for live matches only, including halftime/paused states
+    const liveMatches = matches.filter((m: any) => {
+      const status = String(m.status || '').toUpperCase();
+      return [
+        'LIVE',
+        'IN_PLAY',
+        'HT',
+        '1H',
+        '2H',
+        'PAUSED',
+        'HALFTIME',
+        'HALF_TIME',
+        'BREAK',
+        '1T',
+        '2T',
+      ].includes(status);
+    });
 
     if (liveMatches.length === 0) {
       logger.debug('No live matches found');
@@ -274,7 +289,22 @@ export const triggerManualPoll = async () => {
   logger.debug('Manual poll triggered');
   try {
     const matches = await footballApi.getFixturesByDate(new Date().toISOString().split('T')[0]);
-    const liveMatches = (matches as any[])?.filter((m: any) => m.status === 'live' || m.status === 'IN_PLAY') || [];
+    const liveMatches = (matches as any[])?.filter((m: any) => {
+      const status = String(m.status || '').toUpperCase();
+      return [
+        'LIVE',
+        'IN_PLAY',
+        'HT',
+        '1H',
+        '2H',
+        'PAUSED',
+        'HALFTIME',
+        'HALF_TIME',
+        'BREAK',
+        '1T',
+        '2T',
+      ].includes(status);
+    }) || [];
     
     if (liveMatches.length > 0) {
       lastUpdateTime = Date.now();

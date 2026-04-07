@@ -4,6 +4,7 @@ import Logger from '../services/logger';
 
 interface UseMatchRemindersOptions {
   enabled?: boolean;
+  userId?: string | null;
   onReminder?: (match: any) => void;
   onStarted?: () => void;
   onStopped?: () => void;
@@ -21,6 +22,7 @@ interface UseMatchRemindersResult {
 export const useMatchReminders = (options: UseMatchRemindersOptions = {}): UseMatchRemindersResult => {
   const {
     enabled = true,
+    userId = null,
     onReminder,
     onStarted,
     onStopped,
@@ -39,8 +41,11 @@ export const useMatchReminders = (options: UseMatchRemindersOptions = {}): UseMa
         setIsActive(false);
         onStopped?.();
       }
+      matchReminderService.setUserId(null);
       return;
     }
+
+    matchReminderService.setUserId(userId);
 
     // Subscribe to reminders
     unsubscribeRef.current = matchReminderService.onReminder((match) => {
@@ -66,7 +71,7 @@ export const useMatchReminders = (options: UseMatchRemindersOptions = {}): UseMa
       onStopped?.();
       loggerRef.current.info('[useMatchReminders] Hook unmounted and reminders stopped');
     };
-  }, [enabled, onReminder, onStarted, onStopped]);
+  }, [enabled, userId, onReminder, onStarted, onStopped]);
 
   return {
     isActive,
