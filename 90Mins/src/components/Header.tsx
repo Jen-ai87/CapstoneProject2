@@ -4,6 +4,11 @@ import {
   searchOutline, 
   notificationsOutline, 
   personCircleOutline,
+  happyOutline,
+  footballOutline,
+  flameOutline,
+  flashOutline,
+  trophyOutline,
   menuOutline,
   closeOutline,
   homeOutline,
@@ -26,6 +31,16 @@ interface SearchResult {
   secondaryInfo?: string;
   logo?: string;
 }
+
+const AVATAR_ICON_BY_KEY: Record<string, string> = {
+  personCircleOutline,
+  happyOutline,
+  footballOutline,
+  flameOutline,
+  flashOutline,
+  trophyOutline,
+  starOutline,
+};
 
 const Header: React.FC = () => {
   const { isAuthenticated, user, openAuthModal, signOut } = useAuth();
@@ -241,6 +256,8 @@ const Header: React.FC = () => {
   };
 
   const activeLeagueId = new URLSearchParams(location.search).get('league');
+  const userAvatarIcon = (user?.avatarIcon && AVATAR_ICON_BY_KEY[user.avatarIcon]) || personCircleOutline;
+  const userAvatarColor = user?.avatarColor || '#00B8DB';
 
   return (
     <>
@@ -337,7 +354,7 @@ const Header: React.FC = () => {
                 aria-label="User menu"
                 onClick={() => setShowMobileUserMenu(!showMobileUserMenu)}
               >
-                <IonIcon icon={personCircleOutline} />
+                <IonIcon icon={userAvatarIcon} style={{ color: userAvatarColor }} />
               </button>
               
               {showMobileUserMenu && (
@@ -376,7 +393,9 @@ const Header: React.FC = () => {
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 aria-label="User menu"
               >
-                <IonIcon icon={personCircleOutline} className="header-user-icon" />
+                <span className="header-user-avatar" style={{ background: `${userAvatarColor}22`, borderColor: `${userAvatarColor}55` }}>
+                  <IonIcon icon={userAvatarIcon} className="header-user-icon" style={{ color: userAvatarColor }} />
+                </span>
                 <span className="header-user-name">{user?.name}</span>
               </button>
               

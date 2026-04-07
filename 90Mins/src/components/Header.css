@@ -376,6 +376,16 @@
   color: var(--accent-color);
 }
 
+.header-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .header-user-name {
   font-size: 14px;
   color: var(--text-primary);

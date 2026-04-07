@@ -95,6 +95,12 @@
     margin: 0;
 }
 
+.auth-success {
+    font-size: 13px;
+    color: #00B8DB;
+    margin: 0;
+}
+
 /* Submit button */
 .auth-submit-btn {
     width: 100%;

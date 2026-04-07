@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { IonIcon, IonSpinner } from '@ionic/react';
 import {
   personCircleOutline,
@@ -8,9 +8,36 @@ import {
   keyOutline,
   shieldCheckmarkOutline,
   notificationsOutline,
+  happyOutline,
+  footballOutline,
+  flameOutline,
+  flashOutline,
+  trophyOutline,
+  starOutline,
 } from 'ionicons/icons';
 import { useAuth } from '../context/AuthContext';
+import {
+  defaultNotificationPreferences,
+  fetchUserNotificationPreferences,
+  saveUserNotificationPreferences,
+} from '../services/userNotificationPreferences';
 import './ProfilePage.css';
+
+const AVATAR_ICON_CHOICES = [
+  { key: 'personCircleOutline', icon: personCircleOutline, label: 'Classic' },
+  { key: 'happyOutline', icon: happyOutline, label: 'Smile' },
+  { key: 'footballOutline', icon: footballOutline, label: 'Football' },
+  { key: 'flameOutline', icon: flameOutline, label: 'Flame' },
+  { key: 'flashOutline', icon: flashOutline, label: 'Bolt' },
+  { key: 'trophyOutline', icon: trophyOutline, label: 'Trophy' },
+  { key: 'starOutline', icon: starOutline, label: 'Star' },
+] as const;
+
+const AVATAR_COLOR_CHOICES = ['#00B8DB', '#0EA5E9', '#14B8A6', '#22C55E', '#F59E0B', '#F97316', '#EF4444', '#8B5CF6'] as const;
+
+const AVATAR_ICON_BY_KEY: Record<string, string> = Object.fromEntries(
+  AVATAR_ICON_CHOICES.map((choice) => [choice.key, choice.icon])
+);
 
 const ProfilePage: React.FC = () => {
   const { user, isAuthenticated, updateUser, openAuthModal } = useAuth();
@@ -18,18 +45,172 @@ const ProfilePage: React.FC = () => {
   /* ── Form state — initialised from current user ── */
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
+  const [avatarIcon, setAvatarIcon] = useState(user?.avatarIcon ?? 'personCircleOutline');
+  const [avatarColor, setAvatarColor] = useState(user?.avatarColor ?? '#00B8DB');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  /* Notification preferences (dummy toggles, in-memory only) */
-  const [notifGoals, setNotifGoals] = useState(true);
-  const [notifMatchStart, setNotifMatchStart] = useState(true);
-  const [notifHalfTime, setNotifHalfTime] = useState(false);
-  const [notifFullTime, setNotifFullTime] = useState(true);
+  const [notifGoals, setNotifGoals] = useState(defaultNotificationPreferences.notifGoals);
+  const [notifMatchStart, setNotifMatchStart] = useState(defaultNotificationPreferences.notifMatchStart);
+  const [notifHalfTime, setNotifHalfTime] = useState(defaultNotificationPreferences.notifHalfTime);
+  const [notifFullTime, setNotifFullTime] = useState(defaultNotificationPreferences.notifFullTime);
+  const [initialNotifPrefs, setInitialNotifPrefs] = useState(defaultNotificationPreferences);
+  const [notifSaving, setNotifSaving] = useState(false);
+  const notifSaveRequestRef = useRef(0);
+
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const avatarSaveRequestRef = useRef(0);
 
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    setName(user.name ?? '');
+    setEmail(user.email ?? '');
+    setAvatarIcon(user.avatarIcon ?? 'personCircleOutline');
+    setAvatarColor(user.avatarColor ?? '#00B8DB');
+  }, [user?.name, user?.email, user?.avatarIcon, user?.avatarColor]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPreferences = async () => {
+      if (!isAuthenticated || !user?.id) return;
+
+      const prefs = await fetchUserNotificationPreferences(user.id);
+      if (cancelled) return;
+
+      setNotifGoals(prefs.notifGoals);
+      setNotifMatchStart(prefs.notifMatchStart);
+      setNotifHalfTime(prefs.notifHalfTime);
+      setNotifFullTime(prefs.notifFullTime);
+      setInitialNotifPrefs(prefs);
+    };
+
+    loadPreferences();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.id]);
+
+  const hasProfileChanges =
+    name.trim() !== (user?.name ?? '').trim() ||
+    email.trim() !== (user?.email ?? '').trim();
+
+  const hasPasswordChanges = Boolean(password || confirmPassword);
+
+  const hasNotificationChanges =
+    notifGoals !== initialNotifPrefs.notifGoals ||
+    notifMatchStart !== initialNotifPrefs.notifMatchStart ||
+    notifHalfTime !== initialNotifPrefs.notifHalfTime ||
+    notifFullTime !== initialNotifPrefs.notifFullTime;
+
+  const hasManualChanges = hasProfileChanges || hasPasswordChanges;
+  const hasPendingChanges = hasProfileChanges || hasPasswordChanges || hasNotificationChanges;
+  const shouldShowSaveButton =
+    isEditingProfile || isChangingPassword || hasManualChanges || saving || saved;
+
+  const handleCancelProfileEdit = () => {
+    setName(user?.name ?? '');
+    setEmail(user?.email ?? '');
+    setAvatarIcon(user?.avatarIcon ?? 'personCircleOutline');
+    setAvatarColor(user?.avatarColor ?? '#00B8DB');
+    setIsEditingProfile(false);
+    setError(null);
+  };
+
+  const openAvatarPicker = () => {
+    setIsAvatarPickerOpen(true);
+  };
+
+  const autoSaveAvatarSelection = async (nextIcon: string, nextColor: string) => {
+    if (!user?.id) return;
+
+    const requestId = ++avatarSaveRequestRef.current;
+    setAvatarSaving(true);
+
+    const updateError = await updateUser({
+      avatarIcon: nextIcon,
+      avatarColor: nextColor,
+    });
+
+    if (requestId !== avatarSaveRequestRef.current) {
+      return;
+    }
+
+    if (updateError) {
+      setError(`Avatar failed to sync: ${updateError}`);
+      setAvatarSaving(false);
+      return;
+    }
+
+    setAvatarSaving(false);
+  };
+
+  const handleSelectAvatarIcon = (nextIcon: string) => {
+    if (nextIcon === avatarIcon) return;
+    setError(null);
+    setAvatarIcon(nextIcon);
+    void autoSaveAvatarSelection(nextIcon, avatarColor);
+  };
+
+  const handleSelectAvatarColor = (nextColor: string) => {
+    if (nextColor === avatarColor) return;
+    setError(null);
+    setAvatarColor(nextColor);
+    void autoSaveAvatarSelection(avatarIcon, nextColor);
+  };
+
+  const handleCancelPasswordEdit = () => {
+    setPassword('');
+    setConfirmPassword('');
+    setIsChangingPassword(false);
+    setError(null);
+  };
+
+  const autoSaveNotificationPreferences = async (nextPrefs: typeof initialNotifPrefs) => {
+    if (!user?.id) return;
+
+    const requestId = ++notifSaveRequestRef.current;
+    setNotifSaving(true);
+
+    const result = await saveUserNotificationPreferences(user.id, nextPrefs);
+
+    if (requestId !== notifSaveRequestRef.current) {
+      return;
+    }
+
+    if (!result.ok && result.error && !result.error.includes('Saved locally only')) {
+      setError(`Notification preferences failed to sync: ${result.error}`);
+      setNotifSaving(false);
+      return;
+    }
+
+    setInitialNotifPrefs(nextPrefs);
+    setNotifSaving(false);
+  };
+
+  const handleNotificationToggle = (key: 'notifGoals' | 'notifMatchStart' | 'notifHalfTime' | 'notifFullTime') => {
+    const nextPrefs = {
+      notifGoals,
+      notifMatchStart,
+      notifHalfTime,
+      notifFullTime,
+      [key]: !({ notifGoals, notifMatchStart, notifHalfTime, notifFullTime }[key]),
+    };
+
+    setNotifGoals(nextPrefs.notifGoals);
+    setNotifMatchStart(nextPrefs.notifMatchStart);
+    setNotifHalfTime(nextPrefs.notifHalfTime);
+    setNotifFullTime(nextPrefs.notifFullTime);
+    void autoSaveNotificationPreferences(nextPrefs);
+  };
 
   /* ── Auth guard ── */
   if (!isAuthenticated || !user) {
@@ -60,9 +241,11 @@ const ProfilePage: React.FC = () => {
 
   const handleSaveProfile = async () => {
     setError(null);
+    if (!hasManualChanges) return;
+
     setSaving(true);
-    
-    if (!name.trim() || !email.trim()) {
+
+    if ((isEditingProfile || hasProfileChanges) && (!name.trim() || !email.trim())) {
       setError('Name and email are required');
       setSaving(false);
       return;
@@ -82,17 +265,50 @@ const ProfilePage: React.FC = () => {
       }
     }
 
-    // Simulate async save
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const updatePayload: { name?: string; email?: string; password?: string; avatarIcon?: string; avatarColor?: string } = {};
 
-    updateUser({
-      name: name.trim(),
-      email: email.trim(),
-      ...(password ? { password } : {}),
+    if (isEditingProfile || hasProfileChanges) {
+      updatePayload.name = name.trim();
+      updatePayload.email = email.trim();
+    }
+
+    if (password) {
+      updatePayload.password = password;
+    }
+
+    if (Object.keys(updatePayload).length > 0) {
+      const updateError = await updateUser(updatePayload);
+      if (updateError) {
+        setError(updateError);
+        setSaving(false);
+        return;
+      }
+    }
+
+    const preferenceSaveResult = await saveUserNotificationPreferences(user.id, {
+      notifGoals,
+      notifMatchStart,
+      notifHalfTime,
+      notifFullTime,
+    });
+
+    if (!preferenceSaveResult.ok && preferenceSaveResult.error && !preferenceSaveResult.error.includes('Saved locally only')) {
+      setError(`Profile updated, but notification preferences failed to sync: ${preferenceSaveResult.error}`);
+      setSaving(false);
+      return;
+    }
+
+    setInitialNotifPrefs({
+      notifGoals,
+      notifMatchStart,
+      notifHalfTime,
+      notifFullTime,
     });
 
     setPassword('');
     setConfirmPassword('');
+    setIsEditingProfile(false);
+    setIsChangingPassword(false);
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -108,8 +324,13 @@ const ProfilePage: React.FC = () => {
 
       {/* User avatar card */}
       <div className="profile-avatar-card">
-        <div className="profile-avatar-icon-wrapper">
-          <IonIcon icon={personCircleOutline} className="profile-avatar-icon" />
+        <div className="profile-avatar-stack">
+          <div className="profile-avatar-icon-wrapper" style={{ borderColor: `${avatarColor}55`, background: `${avatarColor}22` }}>
+            <IonIcon icon={AVATAR_ICON_BY_KEY[avatarIcon] || personCircleOutline} className="profile-avatar-icon" style={{ color: avatarColor }} />
+          </div>
+          <button type="button" className="profile-avatar-edit-trigger" onClick={openAvatarPicker}>
+            Edit
+          </button>
         </div>
         <div className="profile-avatar-info">
           <span className="profile-avatar-name">{user.name}</span>
@@ -129,32 +350,56 @@ const ProfilePage: React.FC = () => {
           <div className="profile-card-header">
             <IonIcon icon={personCircleOutline} className="profile-card-icon" />
             <h3 className="profile-card-title">Personal Information</h3>
+            {!isEditingProfile ? (
+              <button className="profile-inline-action" onClick={() => setIsEditingProfile(true)}>
+                Edit
+              </button>
+            ) : (
+              <button className="profile-inline-action ghost" onClick={handleCancelProfileEdit}>
+                Cancel
+              </button>
+            )}
           </div>
 
-          <label className="profile-label">
-            Full Name
-            <input
-              type="text"
-              className="profile-input"
-              value={name}
-              onChange={(e) => { setName(e.target.value); setError(null); }}
-              placeholder="Enter your full name"
-            />
-          </label>
-
-          <label className="profile-label">
-            Email Address
-            <div className="profile-input-with-icon">
-              <IonIcon icon={mailOutline} className="profile-input-icon" />
-              <input
-                type="email"
-                className="profile-input with-icon"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setError(null); }}
-                placeholder="your.email@example.com"
-              />
+          {!isEditingProfile ? (
+            <div className="profile-readonly-group">
+              <div className="profile-readonly-row">
+                <span className="profile-readonly-label">Full Name</span>
+                <span className="profile-readonly-value">{user.name}</span>
+              </div>
+              <div className="profile-readonly-row">
+                <span className="profile-readonly-label">Email Address</span>
+                <span className="profile-readonly-value">{user.email}</span>
+              </div>
             </div>
-          </label>
+          ) : (
+            <>
+              <label className="profile-label">
+                Full Name
+                <input
+                  type="text"
+                  className="profile-input"
+                  value={name}
+                  onChange={(e) => { setName(e.target.value); setError(null); }}
+                  placeholder="Enter your full name"
+                />
+              </label>
+
+              <label className="profile-label">
+                Email Address
+                <div className="profile-input-with-icon">
+                  <IonIcon icon={mailOutline} className="profile-input-icon" />
+                  <input
+                    type="email"
+                    className="profile-input with-icon"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                    placeholder="your.email@example.com"
+                  />
+                </div>
+              </label>
+            </>
+          )}
         </div>
 
         {/* Change password card */}
@@ -162,35 +407,55 @@ const ProfilePage: React.FC = () => {
           <div className="profile-card-header">
             <IonIcon icon={keyOutline} className="profile-card-icon" />
             <h3 className="profile-card-title">Change Password</h3>
+            {!isChangingPassword ? (
+              <button className="profile-inline-action" onClick={() => setIsChangingPassword(true)}>
+                Change
+              </button>
+            ) : (
+              <button className="profile-inline-action ghost" onClick={handleCancelPasswordEdit}>
+                Cancel
+              </button>
+            )}
           </div>
 
-          <label className="profile-label">
-            New Password
-            <div className="profile-input-with-icon">
-              <IonIcon icon={lockClosedOutline} className="profile-input-icon" />
-              <input
-                type="password"
-                className="profile-input with-icon"
-                placeholder="Leave blank to keep current"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(null); }}
-              />
+          {!isChangingPassword ? (
+            <div className="profile-readonly-group">
+              <div className="profile-readonly-row">
+                <span className="profile-readonly-label">Password</span>
+                <span className="profile-readonly-value">••••••••</span>
+              </div>
             </div>
-          </label>
+          ) : (
+            <>
+              <label className="profile-label">
+                New Password
+                <div className="profile-input-with-icon">
+                  <IonIcon icon={lockClosedOutline} className="profile-input-icon" />
+                  <input
+                    type="password"
+                    className="profile-input with-icon"
+                    placeholder="At least 6 characters"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(null); }}
+                  />
+                </div>
+              </label>
 
-          <label className="profile-label">
-            Confirm Password
-            <div className="profile-input-with-icon">
-              <IonIcon icon={lockClosedOutline} className="profile-input-icon" />
-              <input
-                type="password"
-                className="profile-input with-icon"
-                placeholder="Re-enter new password"
-                value={confirmPassword}
-                onChange={(e) => { setConfirmPassword(e.target.value); setError(null); }}
-              />
-            </div>
-          </label>
+              <label className="profile-label">
+                Confirm Password
+                <div className="profile-input-with-icon">
+                  <IonIcon icon={lockClosedOutline} className="profile-input-icon" />
+                  <input
+                    type="password"
+                    className="profile-input with-icon"
+                    placeholder="Re-enter new password"
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setError(null); }}
+                  />
+                </div>
+              </label>
+            </>
+          )}
         </div>
       </div>
 
@@ -205,6 +470,7 @@ const ProfilePage: React.FC = () => {
           <p className="profile-card-description">
             Choose what notifications you want to receive for your favourite teams
           </p>
+          {notifSaving && <p className="profile-sync-note">Saving preference changes...</p>}
 
           <div className="profile-toggle-row">
             <div className="profile-toggle-info">
@@ -213,7 +479,7 @@ const ProfilePage: React.FC = () => {
             </div>
             <button
               className={`profile-toggle ${notifGoals ? 'on' : ''}`}
-              onClick={() => setNotifGoals((v) => !v)}
+              onClick={() => handleNotificationToggle('notifGoals')}
             >
               <span className="profile-toggle-knob" />
             </button>
@@ -226,7 +492,7 @@ const ProfilePage: React.FC = () => {
             </div>
             <button
               className={`profile-toggle ${notifMatchStart ? 'on' : ''}`}
-              onClick={() => setNotifMatchStart((v) => !v)}
+              onClick={() => handleNotificationToggle('notifMatchStart')}
             >
               <span className="profile-toggle-knob" />
             </button>
@@ -239,7 +505,7 @@ const ProfilePage: React.FC = () => {
             </div>
             <button
               className={`profile-toggle ${notifHalfTime ? 'on' : ''}`}
-              onClick={() => setNotifHalfTime((v) => !v)}
+              onClick={() => handleNotificationToggle('notifHalfTime')}
             >
               <span className="profile-toggle-knob" />
             </button>
@@ -252,7 +518,7 @@ const ProfilePage: React.FC = () => {
             </div>
             <button
               className={`profile-toggle ${notifFullTime ? 'on' : ''}`}
-              onClick={() => setNotifFullTime((v) => !v)}
+              onClick={() => handleNotificationToggle('notifFullTime')}
             >
               <span className="profile-toggle-knob" />
             </button>
@@ -268,25 +534,81 @@ const ProfilePage: React.FC = () => {
         </div>
       )}
 
-      <button 
-        className="profile-save-btn" 
-        onClick={handleSaveProfile}
-        disabled={saving}
-      >
-        {saving ? (
-          <>
-            <IonSpinner name="crescent" className="profile-save-spinner" />
-            Saving...
-          </>
-        ) : saved ? (
-          <>
-            <IonIcon icon={checkmarkOutline} />
-            Saved Successfully
-          </>
-        ) : (
-          'Save Changes'
-        )}
-      </button>
+      {shouldShowSaveButton && (
+        <button
+          className="profile-save-btn"
+          onClick={handleSaveProfile}
+          disabled={saving || !hasPendingChanges}
+        >
+          {saving ? (
+            <>
+              <IonSpinner name="crescent" className="profile-save-spinner" />
+              Saving...
+            </>
+          ) : saved ? (
+            <>
+              <IonIcon icon={checkmarkOutline} />
+              Saved Successfully
+            </>
+          ) : (
+            'Save Changes'
+          )}
+        </button>
+      )}
+
+      {isAvatarPickerOpen && (
+        <div className="profile-avatar-picker-overlay" role="dialog" aria-modal="true" aria-label="Choose profile icon and color">
+          <div className="profile-avatar-picker-modal">
+            <h3 className="profile-avatar-picker-title">Choose Your Profile Icon</h3>
+            <p className="profile-avatar-picker-subtitle">Pick an icon and color that matches your style.</p>
+            {avatarSaving && <p className="profile-sync-note">Saving avatar...</p>}
+
+            <div className="profile-avatar-preview" style={{ borderColor: `${avatarColor}55`, background: `${avatarColor}22` }}>
+              <IonIcon
+                icon={AVATAR_ICON_BY_KEY[avatarIcon] || personCircleOutline}
+                className="profile-avatar-icon"
+                style={{ color: avatarColor }}
+              />
+            </div>
+
+            <span className="profile-avatar-editor-label">Profile Icon</span>
+            <div className="profile-avatar-icon-grid">
+              {AVATAR_ICON_CHOICES.map((choice) => (
+                <button
+                  key={choice.key}
+                  type="button"
+                  className={`profile-avatar-option ${avatarIcon === choice.key ? 'selected' : ''}`}
+                  onClick={() => handleSelectAvatarIcon(choice.key)}
+                  aria-label={`Use ${choice.label} icon`}
+                  title={choice.label}
+                  style={{ color: avatarColor }}
+                >
+                  <IonIcon icon={choice.icon} />
+                </button>
+              ))}
+            </div>
+
+            <span className="profile-avatar-editor-label">Icon Color</span>
+            <div className="profile-avatar-color-grid">
+              {AVATAR_COLOR_CHOICES.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`profile-avatar-color ${avatarColor === color ? 'selected' : ''}`}
+                  onClick={() => handleSelectAvatarColor(color)}
+                  aria-label={`Use avatar color ${color}`}
+                  title={color}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+
+            <button type="button" className="profile-avatar-apply-btn" onClick={() => setIsAvatarPickerOpen(false)}>
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

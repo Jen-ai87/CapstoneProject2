@@ -1,15 +1,17 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import { User } from '../data/types';
-import { users, findUserByEmail } from '../data/users';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 /* ── Context shape ── */
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
-  signIn: (email: string, password: string) => string | null;   // returns error msg or null
-  signUp: (name: string, email: string, password: string) => string | null;
-  signOut: () => void;
-  updateUser: (updates: Partial<Pick<User, 'name' | 'email' | 'password'>>) => void;
+  isAuthLoading: boolean;
+  signIn: (email: string, password: string) => Promise<string | null>;   // returns error msg or null
+  signUp: (name: string, email: string, password: string) => Promise<string | null>;
+  signOut: () => Promise<void>;
+  updateUser: (updates: { name?: string; email?: string; password?: string; avatarIcon?: string; avatarColor?: string }) => Promise<string | null>;
   showAuthModal: boolean;
   openAuthModal: (view?: 'signin' | 'signup') => void;
   closeAuthModal: () => void;
@@ -19,63 +21,135 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-/* ── Provider ── */
-const AUTH_STORAGE_KEY = 'auth_user';
+const mapSupabaseUser = (authUser: SupabaseUser): User => {
+  const fullName = authUser.user_metadata?.name;
+  const avatarIcon = authUser.user_metadata?.avatarIcon;
+  const avatarColor = authUser.user_metadata?.avatarColor;
+  const derivedName = typeof fullName === 'string' && fullName.trim().length > 0
+    ? fullName
+    : authUser.email?.split('@')[0] || 'User';
+
+  return {
+    id: authUser.id,
+    name: derivedName,
+    email: authUser.email || '',
+    avatarIcon: typeof avatarIcon === 'string' && avatarIcon.trim().length > 0 ? avatarIcon : 'personCircleOutline',
+    avatarColor: typeof avatarColor === 'string' && avatarColor.trim().length > 0 ? avatarColor : '#00B8DB',
+  };
+};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalView, setAuthModalView] = useState<'signin' | 'signup'>('signin');
 
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setIsAuthLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
+    const initSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setUser(data.session?.user ? mapSupabaseUser(data.session.user) : null);
+      setIsAuthLoading(false);
+    };
+
+    initSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ? mapSupabaseUser(session.user) : null);
+      setIsAuthLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
   const isAuthenticated = user !== null;
 
-  const signIn = useCallback((email: string, password: string): string | null => {
-    const found = findUserByEmail(email);
-    if (!found) return 'No account found with this email';
-    if (found.password !== password) return 'Incorrect password';
-    setUser(found);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(found));
+  const signIn = useCallback(async (email: string, password: string): Promise<string | null> => {
+    if (!isSupabaseConfigured) {
+      return 'Supabase is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.';
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return error.message;
+    if (!data.user) return 'Unable to sign in right now. Please try again.';
+
+    setUser(mapSupabaseUser(data.user));
     setShowAuthModal(false);
     return null;
   }, []);
 
-  const signUp = useCallback((name: string, email: string, password: string): string | null => {
-    if (findUserByEmail(email)) return 'An account with this email already exists';
-    const newUser: User = {
-      id: `user-${users.length + 1}`,
-      name,
+  const signUp = useCallback(async (name: string, email: string, password: string): Promise<string | null> => {
+    if (!isSupabaseConfigured) {
+      return 'Supabase is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.';
+    }
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-    };
-    users.push(newUser); // add to in-memory array
-    setUser(newUser);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
-    setShowAuthModal(false);
-    return null;
-  }, []);
-
-  const signOut = useCallback(() => {
-    setUser(null);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-  }, []);
-
-  const updateUser = useCallback((updates: Partial<Pick<User, 'name' | 'email' | 'password'>>) => {
-    setUser((prev) => {
-      if (!prev) return prev;
-      const updated = { ...prev, ...updates };
-      // Also update the in-memory users array so sign-in stays consistent
-      const idx = users.findIndex((u) => u.id === prev.id);
-      if (idx !== -1) users[idx] = updated;
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
-      return updated;
+      options: {
+        data: { name },
+      },
     });
+
+    if (error) return error.message;
+
+    if (data.user && data.session) {
+      setUser(mapSupabaseUser(data.user));
+      setShowAuthModal(false);
+      return null;
+    }
+
+    return 'Account created. Please check your email to confirm your account, then sign in.';
+  }, []);
+
+  const signOut = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setUser(null);
+      return;
+    }
+
+    await supabase.auth.signOut();
+    setUser(null);
+  }, []);
+
+  const updateUser = useCallback(async (updates: { name?: string; email?: string; password?: string; avatarIcon?: string; avatarColor?: string }) => {
+    if (!isSupabaseConfigured) {
+      return 'Supabase is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.';
+    }
+
+    const payload: {
+      email?: string;
+      password?: string;
+      data?: Record<string, string>;
+    } = {};
+
+    if (updates.email) payload.email = updates.email;
+    if (updates.password) payload.password = updates.password;
+
+    const metadataUpdates: Record<string, string> = {};
+    if (updates.name) metadataUpdates.name = updates.name;
+    if (updates.avatarIcon) metadataUpdates.avatarIcon = updates.avatarIcon;
+    if (updates.avatarColor) metadataUpdates.avatarColor = updates.avatarColor;
+    if (Object.keys(metadataUpdates).length > 0) payload.data = metadataUpdates;
+
+    const { data, error } = await supabase.auth.updateUser(payload);
+    if (error) return error.message;
+
+    if (data.user) {
+      setUser(mapSupabaseUser(data.user));
+    }
+
+    return null;
   }, []);
 
   const openAuthModal = useCallback((view: 'signin' | 'signup' = 'signin') => {
@@ -92,6 +166,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       value={{
         user,
         isAuthenticated,
+        isAuthLoading,
         signIn,
         signUp,
         signOut,
